@@ -93,6 +93,74 @@
       opacity: 0.4;
       cursor: not-allowed;
     }
+    /* Level overlay */
+    #level-overlay {
+      display: none;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.78);
+      z-index: 10;
+      pointer-events: auto;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #fff;
+    }
+    #level-overlay.active { display: flex; }
+    #level-overlay h1 {
+      font-size: 28px;
+      color: #ffca28;
+      letter-spacing: 3px;
+      margin-bottom: 12px;
+    }
+    #level-overlay h2 {
+      font-size: 18px;
+      color: #00ffcc;
+      margin-bottom: 10px;
+    }
+    #level-overlay p {
+      font-size: 13px;
+      color: #ccc;
+      max-width: 420px;
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+    #level-overlay ul {
+      list-style: none;
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    #level-overlay ul li::before { content: "▸ "; color: #ff9800; }
+    .btn-overlay {
+      pointer-events: auto;
+      background: #ff5722;
+      color: #fff;
+      border: none;
+      padding: 14px 36px;
+      font-size: 15px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      margin: 6px;
+    }
+    .btn-overlay.secondary {
+      background: #37474f;
+      font-size: 12px;
+      padding: 10px 24px;
+    }
+    #level-badge {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+    }
     /* Joysticks Táctiles */
     .joystick-zone {
       position: absolute;
@@ -145,6 +213,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+  <!-- Level intro / completion overlay -->
+  <div id="level-overlay">
+    <h1 id="ov-level-title">NIVEL 1</h1>
+    <h2 id="ov-subtitle">Vuelo de Iniciación</h2>
+    <p id="ov-desc">Aprende los controles básicos.</p>
+    <ul id="ov-objectives"></ul>
+    <button class="btn-overlay" id="btn-start-level">COMENZAR</button>
+    <button class="btn-overlay secondary" id="btn-prev-level" style="display:none">◀ NIVEL ANTERIOR</button>
+  </div>
+
   <div id="canvas-container"></div>
 
   <div id="ui-layer">
@@ -176,6 +254,10 @@
   </div>
 
   <script>
+    // =====================================================================
+    // SIMULADOR TELLO EDU – ACADEMIA DE VUELO (Multi-Nivel)
+    // =====================================================================
+
     // --- 1. CONFIGURACIÓN THREE.JS ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
@@ -188,7 +270,7 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
-    // Domo de cielo procedural (Horizonte despejado)
+    // Domo de cielo procedural
     const vertexShader = `
       varying vec3 vWorldPosition;
       void main() {
@@ -213,13 +295,12 @@
       }
     `;
     const skyMat = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
+      vertexShader, fragmentShader,
       uniforms: {
-        topColor: { value: new THREE.Color(0x1976d2) },
-        groundHorizonColor: { value: new THREE.Color(0xcce0ff) },
-        bottomColor: { value: new THREE.Color(0x2d3a2e) },
-        exponent: { value: 0.5 }
+        topColor:          { value: new THREE.Color(0x1976d2) },
+        groundHorizonColor:{ value: new THREE.Color(0xcce0ff) },
+        bottomColor:       { value: new THREE.Color(0x2d3a2e) },
+        exponent:          { value: 0.5 }
       },
       side: THREE.BackSide
     });
@@ -255,32 +336,22 @@
     startPad.position.set(0, 0.01, 0);
     scene.add(startPad);
 
-    // --- 2. AYUDAS VISUALES ESPACIALES PARA ALUMNOS ---
-    // A) Sombra proyectada vertical sintética (Shadow Blob)
+    // --- 2. AYUDAS VISUALES ESPACIALES ---
     const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x050d0a,
-      transparent: true,
-      opacity: 0.65,
-      depthWrite: false
+      color: 0x050d0a, transparent: true, opacity: 0.65, depthWrite: false
     });
     const shadowDisc = new THREE.Mesh(new THREE.CircleGeometry(0.35, 32), shadowMat);
     shadowDisc.rotation.x = -Math.PI / 2;
     shadowDisc.position.y = 0.015;
     scene.add(shadowDisc);
 
-    // B) Haz visual del sensor de flujo óptico inferior (ToF / VPS Cone)
     const vpsBeamGeo = new THREE.CylinderGeometry(0.02, 0.25, 1.0, 16, 1, true);
     const vpsBeamMat = new THREE.MeshBasicMaterial({
-      color: 0x00e5ff,
-      transparent: true,
-      opacity: 0.15,
-      wireframe: true,
-      depthWrite: false
+      color: 0x00e5ff, transparent: true, opacity: 0.15, wireframe: true, depthWrite: false
     });
     const vpsBeam = new THREE.Mesh(vpsBeamGeo, vpsBeamMat);
     scene.add(vpsBeam);
 
-    // C) Flecha guía de rumbo en el suelo (Orientación de vuelo)
     const headingArrowGeo = new THREE.ConeGeometry(0.1, 0.3, 8);
     headingArrowGeo.rotateX(Math.PI / 2);
     const headingArrowMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.5 });
@@ -288,28 +359,11 @@
     headingArrow.position.y = 0.02;
     scene.add(headingArrow);
 
-    // --- 3. ZONA DE PERTURBACIÓN AMBIENTAL (SUPERFICIE COMPLEJA / VPS OFF) ---
-    // Simula agua o una superficie hiper-reflectante donde el VPS se apaga y el dron entra en deriva
-    const slickZoneGeo = new THREE.PlaneGeometry(5, 5);
-    const slickZoneMat = new THREE.MeshStandardMaterial({
-      color: 0x29b6f6,
-      roughness: 0.05,
-      metalness: 0.8,
-      transparent: true,
-      opacity: 0.8
-    });
-    const slickZone = new THREE.Mesh(slickZoneGeo, slickZoneMat);
-    slickZone.rotation.x = -Math.PI / 2;
-    slickZone.position.set(0, 0.018, -6);
-    scene.add(slickZone);
-
-    const slickBounds = { minX: -2.5, maxX: 2.5, minZ: -8.5, maxZ: -3.5 };
-
-    // --- 4. MODELADO DEL DRON ---
+    // --- 3. MODELADO DEL DRON ---
     const droneGroup = new THREE.Group();
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x212121 });
-    const topMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    
+    const bodyMat  = new THREE.MeshStandardMaterial({ color: 0x212121 });
+    const topMat   = new THREE.MeshStandardMaterial({ color: 0xffffff });
+
     const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.18), bodyMat);
     baseMesh.castShadow = true;
     droneGroup.add(baseMesh);
@@ -318,10 +372,7 @@
     topCap.position.y = 0.025;
     droneGroup.add(topCap);
 
-    [
-      [0.11, 0.01, 0.11], [-0.11, 0.01, 0.11],
-      [0.11, 0.01, -0.11], [-0.11, 0.01, -0.11]
-    ].forEach(([x, y, z]) => {
+    [[0.11,0.01,0.11],[-0.11,0.01,0.11],[0.11,0.01,-0.11],[-0.11,0.01,-0.11]].forEach(([x,y,z]) => {
       const g = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.005, 8, 20), bodyMat);
       g.rotation.x = Math.PI / 2;
       g.position.set(x, y, z);
@@ -331,69 +382,13 @@
     droneGroup.position.set(0, 0.02, 0);
     scene.add(droneGroup);
 
-    // --- 5. OBSTÁCULOS Y AROS DE MISIÓN ---
-    const obstacles = [];
-
-    function createFlightGate(x, y, z, rotY = 0) {
-      const gateGroup = new THREE.Group();
-      const ringMat = new THREE.MeshStandardMaterial({ color: 0xff9800, roughness: 0.3, emissive: 0x331e00 });
-      const size = 1.4;
-      const thick = 0.12;
-
-      const topSeg = new THREE.Mesh(new THREE.BoxGeometry(size + thick * 2, thick, thick), ringMat);
-      topSeg.position.set(0, size / 2 + thick / 2, 0);
-      const btmSeg = new THREE.Mesh(new THREE.BoxGeometry(size + thick * 2, thick, thick), ringMat);
-      btmSeg.position.set(0, -size / 2 - thick / 2, 0);
-      const lSeg = new THREE.Mesh(new THREE.BoxGeometry(thick, size, thick), ringMat);
-      lSeg.position.set(-size / 2 - thick / 2, 0, 0);
-      const rSeg = new THREE.Mesh(new THREE.BoxGeometry(thick, size, thick), ringMat);
-      rSeg.position.set(size / 2 + thick / 2, 0, 0);
-
-      const legHeight = y - size / 2 - thick;
-      const legGeo = new THREE.CylinderGeometry(0.04, 0.04, legHeight, 16);
-      const legMat = new THREE.MeshStandardMaterial({ color: 0x37474f });
-      const leftLeg = new THREE.Mesh(legGeo, legMat);
-      leftLeg.position.set(-size / 2 - thick / 2, -size / 2 - thick - legHeight / 2, 0);
-      const rightLeg = new THREE.Mesh(legGeo, legMat);
-      rightLeg.position.set(size / 2 + thick / 2, -size / 2 - thick - legHeight / 2, 0);
-
-      gateGroup.add(topSeg, btmSeg, lSeg, rSeg, leftLeg, rightLeg);
-      gateGroup.position.set(x, y, z);
-      gateGroup.rotation.y = rotY;
-      scene.add(gateGroup);
-
-      [topSeg, btmSeg, lSeg, rSeg, leftLeg, rightLeg].forEach(part => {
-        part.updateWorldMatrix(true, false);
-        obstacles.push({ box: new THREE.Box3().setFromObject(part), mesh: part });
-      });
-
-      return {
-        center: new THREE.Vector3(x, y, z),
-        radius: size / 2,
-        setSuccess: () => {
-          ringMat.color.setHex(0x00ffcc);
-          ringMat.emissive.setHex(0x003322);
-        }
-      };
-    }
-
-    const gate1 = createFlightGate(0, 1.2, -3.5, 0);
-    const gate2 = createFlightGate(3.2, 1.4, -8.5, Math.PI / 4);
-
-    const landingPad = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.9, 0.9, 0.02, 32),
-      new THREE.MeshStandardMaterial({ color: 0xffeb3b, roughness: 0.3 })
-    );
-    landingPad.position.set(0, 0.01, -12);
-    scene.add(landingPad);
-
-    // --- 6. DINÁMICA DE VUELO CON VIENTO Y PERTURBACIÓN ---
+    // --- 4. ESTADO DE VUELO ---
     const FlightState = {
-      LANDED: 'EN TIERRA',
-      TAKING_OFF: 'DESPEGANDO...',
-      FLYING: 'EN VUELO',
-      LANDING: 'ATERRIZANDO...',
-      CRASHED: 'COLISIÓN'
+      LANDED:    'EN TIERRA',
+      TAKING_OFF:'DESPEGANDO...',
+      FLYING:    'EN VUELO',
+      LANDING:   'ATERRIZANDO...',
+      CRASHED:   'COLISIÓN'
     };
 
     const drone = {
@@ -409,24 +404,453 @@
       vpsActive: true
     };
 
-    const rawInput = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
-    const filteredInput = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+    const rawInput      = { throttle:0, yaw:0, pitch:0, roll:0 };
+    const filteredInput = { throttle:0, yaw:0, pitch:0, roll:0 };
 
     const CONFIG = {
-      MAX_SPEED: 2.6,
+      MAX_SPEED:      2.6,
       MAX_VERT_SPEED: 1.0,
-      TAKEOFF_SPEED: 0.6,
-      LANDING_SPEED: 0.4,
-      MAX_YAW_RATE: 1.8,
-      INPUT_FILTER: 6.0,
-      ACCEL_DAMP: 3.5,
-      NORMAL_DRAG: 2.5,
-      VPS_FAIL_DRAG: 0.25, // Si falla el VPS, casi no hay freno automático
-      TILT_FACTOR: 0.12
+      TAKEOFF_SPEED:  0.6,
+      LANDING_SPEED:  0.4,
+      MAX_YAW_RATE:   1.8,
+      INPUT_FILTER:   6.0,
+      ACCEL_DAMP:     3.5,
+      NORMAL_DRAG:    2.5,
+      VPS_FAIL_DRAG:  0.25,
+      TILT_FACTOR:    0.12
     };
 
-    // Vector de viento ambiental sutil
-    const windVector = new THREE.Vector3(0.35, 0, 0.15);
+    // =====================================================================
+    // --- 5. SISTEMA MULTI-NIVEL ---
+    // =====================================================================
+
+    // Objetos dinámicos de nivel (se limpian al cambiar de nivel)
+    let levelObjects   = []; // THREE.Object3D que se añaden a la escena
+    let obstacles      = []; // colisionadores del nivel actual
+    let levelSlickZones= []; // { mesh, bounds }
+    let levelGates     = []; // objetos gate devueltos por createFlightGate
+    let levelLandingPad = null;
+    let movingGate     = null; // gate animado en nivel 3
+
+    // Viento del nivel activo
+    let windVector = new THREE.Vector3(0.35, 0, 0.15);
+
+    // Misiones del nivel activo
+    let missions = [];
+    let currentMissionIdx = 0;
+    let missionTimer  = 0;
+    let timerRunning  = false;
+
+    let currentLevel  = 0; // índice 0-based
+
+    // ------ createFlightGate parametrizado ------
+    function createFlightGate(x, y, z, rotY = 0, size = 1.4) {
+      const gateGroup = new THREE.Group();
+      const ringMat = new THREE.MeshStandardMaterial({ color: 0xff9800, roughness: 0.3, emissive: 0x331e00 });
+      const thick = 0.12;
+
+      const topSeg = new THREE.Mesh(new THREE.BoxGeometry(size + thick*2, thick, thick), ringMat);
+      topSeg.position.set(0,  size/2 + thick/2, 0);
+      const btmSeg = new THREE.Mesh(new THREE.BoxGeometry(size + thick*2, thick, thick), ringMat);
+      btmSeg.position.set(0, -size/2 - thick/2, 0);
+      const lSeg = new THREE.Mesh(new THREE.BoxGeometry(thick, size, thick), ringMat);
+      lSeg.position.set(-size/2 - thick/2, 0, 0);
+      const rSeg = new THREE.Mesh(new THREE.BoxGeometry(thick, size, thick), ringMat);
+      rSeg.position.set( size/2 + thick/2, 0, 0);
+
+      const legHeight = Math.max(0.01, y - size/2 - thick);
+      const legGeo  = new THREE.CylinderGeometry(0.04, 0.04, legHeight, 16);
+      const legMat  = new THREE.MeshStandardMaterial({ color: 0x37474f });
+      const leftLeg = new THREE.Mesh(legGeo, legMat);
+      leftLeg.position.set(-size/2 - thick/2, -size/2 - thick - legHeight/2, 0);
+      const rightLeg = new THREE.Mesh(legGeo, legMat);
+      rightLeg.position.set( size/2 + thick/2, -size/2 - thick - legHeight/2, 0);
+
+      gateGroup.add(topSeg, btmSeg, lSeg, rSeg, leftLeg, rightLeg);
+      gateGroup.position.set(x, y, z);
+      gateGroup.rotation.y = rotY;
+      scene.add(gateGroup);
+      levelObjects.push(gateGroup);
+
+      [topSeg, btmSeg, lSeg, rSeg, leftLeg, rightLeg].forEach(part => {
+        part.updateWorldMatrix(true, false);
+        const colBox = { box: new THREE.Box3().setFromObject(part), mesh: part };
+        obstacles.push(colBox);
+      });
+
+      return {
+        center: new THREE.Vector3(x, y, z),
+        radius: size / 2,
+        group: gateGroup,
+        ringMat,
+        setSuccess: () => {
+          ringMat.color.setHex(0x00ffcc);
+          ringMat.emissive.setHex(0x003322);
+        }
+      };
+    }
+
+    function createSlickZone(x, z, w, d) {
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, d),
+        new THREE.MeshStandardMaterial({ color: 0x29b6f6, roughness: 0.05, metalness: 0.8, transparent: true, opacity: 0.8 })
+      );
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.018, z);
+      scene.add(mesh);
+      levelObjects.push(mesh);
+      const cx = x, cz = z;
+      return {
+        mesh,
+        bounds: { minX: cx - w/2, maxX: cx + w/2, minZ: cz - d/2, maxZ: cz + d/2 }
+      };
+    }
+
+    function createLandingPad(x, z, color = 0xffeb3b) {
+      const pad = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.9, 0.9, 0.02, 32),
+        new THREE.MeshStandardMaterial({ color, roughness: 0.3 })
+      );
+      pad.position.set(x, 0.01, z);
+      scene.add(pad);
+      levelObjects.push(pad);
+      return pad;
+    }
+
+    // ------ DEFINICIONES DE NIVELES ------
+    // Cada nivel devuelve funciones: setup(), missions[], wind, y levelName
+    const LEVEL_DEFS = [
+      // ----------------------------------------------------------------
+      // NIVEL 1 – Iniciación (idéntico al diseño original)
+      // ----------------------------------------------------------------
+      {
+        name: "NIVEL 1",
+        subtitle: "Vuelo de Iniciación",
+        desc: "Aprende el despegue, los controles básicos y el aterrizaje de precisión.",
+        objectives: [
+          "Despega y atraviesa el Aro 1 a baja velocidad",
+          "Cruza la zona celeste (VPS ciego) hacia el Aro 2",
+          "Aterriza con suavidad en el helipuerto amarillo"
+        ],
+        windScale: 1.0,
+        windDir: new THREE.Vector3(0.35, 0, 0.15),
+        setup() {
+          const g1 = createFlightGate(0, 1.2, -3.5, 0, 1.4);
+          const g2 = createFlightGate(3.2, 1.4, -8.5, Math.PI/4, 1.4);
+          levelGates.push(g1, g2);
+
+          const sz = createSlickZone(0, -6, 5, 5);
+          levelSlickZones.push(sz);
+
+          levelLandingPad = createLandingPad(0, -12);
+
+          missions = [
+            {
+              title: "MISIÓN 1 / 3",
+              desc: "Despega y atraviesa lentamente el Aro 1",
+              check: () => {
+                const d = drone.pos.distanceTo(g1.center);
+                return (d < g1.radius && Math.abs(drone.pos.z - g1.center.z) < 0.4);
+              },
+              onComplete: () => g1.setSuccess()
+            },
+            {
+              title: "MISIÓN 2 / 3",
+              desc: "Cruza la zona celeste (¡El viento provocará deriva!) hacia el Aro 2",
+              check: () => {
+                const d = drone.pos.distanceTo(g2.center);
+                return (d < g2.radius && Math.abs(drone.pos.z - g2.center.z) < 0.4);
+              },
+              onComplete: () => g2.setSuccess()
+            },
+            {
+              title: "MISIÓN 3 / 3",
+              desc: "Aterriza con suavidad en el helipuerto amarillo final",
+              check: () => false  // handled by checkMissionLanding
+            }
+          ];
+        }
+      },
+
+      // ----------------------------------------------------------------
+      // NIVEL 2 – Slalom Intermedio
+      // ----------------------------------------------------------------
+      {
+        name: "NIVEL 2",
+        subtitle: "Slalom Intermedio",
+        desc: "Los aros están dispuestos en zigzag y el viento es más fuerte. Los aros son más pequeños.",
+        objectives: [
+          "Navega el slalom: Aro 1 → Aro 2 → Aro 3",
+          "La zona VPS se extiende entre los aros 2 y 3",
+          "Aterriza en el helipuerto rojo al fondo"
+        ],
+        windScale: 1.8,
+        windDir: new THREE.Vector3(0.6, 0, 0.3),
+        setup() {
+          const g1 = createFlightGate( 0,   1.3, -4,    0,           1.2);
+          const g2 = createFlightGate(-3.5, 1.5, -8,    Math.PI/6,   1.2);
+          const g3 = createFlightGate( 3.0, 1.6, -13,  -Math.PI/6,   1.2);
+          levelGates.push(g1, g2, g3);
+
+          const sz = createSlickZone(-0.5, -10.5, 6, 5);
+          levelSlickZones.push(sz);
+
+          levelLandingPad = createLandingPad(0, -18, 0xff3d00);
+
+          const total = 4;
+          missions = [
+            {
+              title: `MISIÓN 1 / ${total}`,
+              desc: "Atraviesa el Aro 1 (eje Z negativo)",
+              check: () => drone.pos.distanceTo(g1.center) < g1.radius && Math.abs(drone.pos.z - g1.center.z) < 0.5,
+              onComplete: () => g1.setSuccess()
+            },
+            {
+              title: `MISIÓN 2 / ${total}`,
+              desc: "Gira a la izquierda: Aro 2 al norte-oeste",
+              check: () => drone.pos.distanceTo(g2.center) < g2.radius && Math.abs(drone.pos.z - g2.center.z) < 0.5,
+              onComplete: () => g2.setSuccess()
+            },
+            {
+              title: `MISIÓN 3 / ${total}`,
+              desc: "Cruza la zona VPS y alcanza el Aro 3 (¡viento fuerte!)",
+              check: () => drone.pos.distanceTo(g3.center) < g3.radius && Math.abs(drone.pos.z - g3.center.z) < 0.5,
+              onComplete: () => g3.setSuccess()
+            },
+            {
+              title: `MISIÓN 4 / ${total}`,
+              desc: "Aterriza en el helipuerto ROJO al fondo",
+              check: () => false
+            }
+          ];
+        }
+      },
+
+      // ----------------------------------------------------------------
+      // NIVEL 3 – Altura Variable + Aro Móvil
+      // ----------------------------------------------------------------
+      {
+        name: "NIVEL 3",
+        subtitle: "Alturas Variables y Aro Móvil",
+        desc: "Los aros están a diferentes alturas. El tercer aro se mueve lateralmente. El viento gusta con más intensidad.",
+        objectives: [
+          "Sube al Aro 1 (alto, 2.5 m)",
+          "Baja al Aro 2 (bajo, 0.9 m) — cuidado con el suelo",
+          "Intercepta el Aro 3 MÓVIL en movimiento",
+          "Aterriza precisamente en el helipuerto azul"
+        ],
+        windScale: 2.2,
+        windDir: new THREE.Vector3(0.5, 0, -0.2),
+        setup() {
+          const g1 = createFlightGate( 0,   2.5, -5,   0,         1.3);
+          const g2 = createFlightGate(-2.5, 0.9, -10,  Math.PI/5, 1.3);
+          const g3 = createFlightGate( 0,   1.8, -16,  0,         1.1);  // se moverá
+          const g4 = createFlightGate( 2.0, 2.0, -22, -Math.PI/8, 1.2);
+          levelGates.push(g1, g2, g3, g4);
+          movingGate = g3;
+
+          const sz1 = createSlickZone(-1, -8,  5, 4);
+          const sz2 = createSlickZone( 1, -19, 5, 4);
+          levelSlickZones.push(sz1, sz2);
+
+          levelLandingPad = createLandingPad(0, -27, 0x1e88e5);
+
+          const total = 5;
+          missions = [
+            {
+              title: `MISIÓN 1 / ${total}`,
+              desc: "Sube y atraviesa el Aro 1 (2.5 m de altura)",
+              check: () => drone.pos.distanceTo(g1.center) < g1.radius && Math.abs(drone.pos.z - g1.center.z) < 0.5,
+              onComplete: () => g1.setSuccess()
+            },
+            {
+              title: `MISIÓN 2 / ${total}`,
+              desc: "Desciende rápido: Aro 2 está muy bajo (0.9 m)",
+              check: () => drone.pos.distanceTo(g2.center) < g2.radius && Math.abs(drone.pos.z - g2.center.z) < 0.5,
+              onComplete: () => g2.setSuccess()
+            },
+            {
+              title: `MISIÓN 3 / ${total}`,
+              desc: "⚡ El Aro 3 se mueve — ¡intercepta su trayectoria!",
+              check: () => drone.pos.distanceTo(g3.center) < g3.radius && Math.abs(drone.pos.z - g3.center.z) < 0.6,
+              onComplete: () => g3.setSuccess()
+            },
+            {
+              title: `MISIÓN 4 / ${total}`,
+              desc: "Atraviesa el Aro 4 final antes de aterrizar",
+              check: () => drone.pos.distanceTo(g4.center) < g4.radius && Math.abs(drone.pos.z - g4.center.z) < 0.5,
+              onComplete: () => g4.setSuccess()
+            },
+            {
+              title: `MISIÓN 5 / ${total}`,
+              desc: "Aterriza en el helipuerto AZUL con precisión",
+              check: () => false
+            }
+          ];
+        }
+      },
+
+      // ----------------------------------------------------------------
+      // NIVEL 4 – Maestro del Viento
+      // ----------------------------------------------------------------
+      {
+        name: "NIVEL 4",
+        subtitle: "Maestro del Viento",
+        desc: "Aros muy estrechos, viento huracanado, doble zona VPS y una ruta de precisión extrema.",
+        objectives: [
+          "5 aros estrechos (1.0 m) en formación tridimensional",
+          "Doble zona VPS — el dron deriva sin corrección",
+          "Viento fuerte cambiante: mantén el control",
+          "Aterrizaje de precisión en helipuerto pequeño (0.5 m)"
+        ],
+        windScale: 3.0,
+        windDir: new THREE.Vector3(0.9, 0, 0.5),
+        setup() {
+          const g1 = createFlightGate( 0,   1.5,  -4,   0,          1.0);
+          const g2 = createFlightGate( 2.5, 2.2,  -8,   Math.PI/3,  1.0);
+          const g3 = createFlightGate(-2.5, 1.0,  -13, -Math.PI/4,  1.0);
+          const g4 = createFlightGate( 1.5, 2.8,  -18,  Math.PI/6,  1.0);
+          const g5 = createFlightGate(-1.0, 1.5,  -23,  0,          1.0);
+          levelGates.push(g1, g2, g3, g4, g5);
+
+          const sz1 = createSlickZone( 1.5, -6,  5, 4);
+          const sz2 = createSlickZone(-1.0, -15, 5, 4);
+          levelSlickZones.push(sz1, sz2);
+
+          // Helipuerto pequeño y difícil
+          const pad = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.5, 0.5, 0.02, 32),
+            new THREE.MeshStandardMaterial({ color: 0xab47bc, roughness: 0.3 })
+          );
+          pad.position.set(0, 0.01, -28);
+          scene.add(pad);
+          levelObjects.push(pad);
+          levelLandingPad = pad;
+          levelLandingPad._precisionRadius = 0.55; // más pequeño
+
+          const total = 6;
+          missions = [
+            {
+              title: `MISIÓN 1 / ${total}`,
+              desc: "Aro estrecho 1 — control fino del yaw necesario",
+              check: () => drone.pos.distanceTo(g1.center) < g1.radius && Math.abs(drone.pos.z - g1.center.z) < 0.45,
+              onComplete: () => g1.setSuccess()
+            },
+            {
+              title: `MISIÓN 2 / ${total}`,
+              desc: "Aro 2 a la derecha — el viento empuja lateralmente",
+              check: () => drone.pos.distanceTo(g2.center) < g2.radius && Math.abs(drone.pos.z - g2.center.z) < 0.45,
+              onComplete: () => g2.setSuccess()
+            },
+            {
+              title: `MISIÓN 3 / ${total}`,
+              desc: "Aro 3 bajo y a la izquierda — zona VPS activa",
+              check: () => drone.pos.distanceTo(g3.center) < g3.radius && Math.abs(drone.pos.z - g3.center.z) < 0.45,
+              onComplete: () => g3.setSuccess()
+            },
+            {
+              title: `MISIÓN 4 / ${total}`,
+              desc: "Aro 4 elevado — segunda zona VPS a continuación",
+              check: () => drone.pos.distanceTo(g4.center) < g4.radius && Math.abs(drone.pos.z - g4.center.z) < 0.45,
+              onComplete: () => g4.setSuccess()
+            },
+            {
+              title: `MISIÓN 5 / ${total}`,
+              desc: "Aro 5 final — mantén la compostura",
+              check: () => drone.pos.distanceTo(g5.center) < g5.radius && Math.abs(drone.pos.z - g5.center.z) < 0.45,
+              onComplete: () => g5.setSuccess()
+            },
+            {
+              title: `MISIÓN 6 / ${total}`,
+              desc: "Aterriza en el helipuerto MORADO (pequeño — precisión máxima)",
+              check: () => false
+            }
+          ];
+        }
+      }
+    ];
+
+    // ------ Limpiar y cargar nivel ------
+    function clearLevel() {
+      // Eliminar objetos de la escena
+      levelObjects.forEach(obj => scene.remove(obj));
+      levelObjects   = [];
+      obstacles      = [];
+      levelSlickZones= [];
+      levelGates     = [];
+      levelLandingPad = null;
+      movingGate     = null;
+      missions       = [];
+    }
+
+    function loadLevel(idx) {
+      clearLevel();
+      currentLevel = idx;
+      currentMissionIdx = 0;
+      missionTimer  = 0;
+      timerRunning  = false;
+
+      const def = LEVEL_DEFS[idx];
+      windVector = def.windDir.clone().multiplyScalar(def.windScale / 1.0);
+
+      def.setup();
+
+      // Actualizar HUD
+      missionTitleEl.textContent = missions[0].title;
+      missionDescEl.textContent  = missions[0].desc;
+      missionTitleEl.style.color = '#ffca28';
+      missionTimerEl.textContent = 'TIEMPO: 00:00.0';
+
+      // Resetear dron
+      drone.pos.set(0, 0.02, 0);
+      drone.vel.set(0, 0, 0);
+      drone.yaw      = 0;
+      drone.yawRate  = 0;
+      drone.pitch    = 0;
+      drone.roll     = 0;
+      setFlightState(FlightState.LANDED);
+    }
+
+    // ------ Overlay de nivel ------
+    const levelOverlay    = document.getElementById('level-overlay');
+    const ovLevelTitle    = document.getElementById('ov-level-title');
+    const ovSubtitle      = document.getElementById('ov-subtitle');
+    const ovDesc          = document.getElementById('ov-desc');
+    const ovObjectives    = document.getElementById('ov-objectives');
+    const btnStartLevel   = document.getElementById('btn-start-level');
+    const btnPrevLevel    = document.getElementById('btn-prev-level');
+
+    function showLevelOverlay(idx, isTransition) {
+      const def = LEVEL_DEFS[idx];
+      ovLevelTitle.textContent = def.name;
+      ovSubtitle.textContent   = def.subtitle;
+      ovDesc.textContent       = def.desc;
+      ovObjectives.innerHTML   = def.objectives.map(o => `<li>${o}</li>`).join('');
+      btnStartLevel.textContent = isTransition ? '▶ EMPEZAR NIVEL' : 'COMENZAR';
+      btnPrevLevel.style.display = (idx > 0) ? 'inline-block' : 'none';
+      levelOverlay.classList.add('active');
+    }
+
+    btnStartLevel.addEventListener('click', () => {
+      levelOverlay.classList.remove('active');
+      loadLevel(currentLevel);
+    });
+
+    btnPrevLevel.addEventListener('click', () => {
+      if (currentLevel > 0) {
+        currentLevel--;
+        showLevelOverlay(currentLevel, true);
+        loadLevel(currentLevel);
+      }
+    });
+
+    // ------ Mostrar overlay inicial ------
+    showLevelOverlay(0, false);
+    loadLevel(0);
+
+    // =====================================================================
+    // --- 6. DINÁMICA DE VUELO ---
+    // =====================================================================
 
     function checkAndResolveCollisions() {
       if (drone.state === FlightState.LANDED) return;
@@ -439,14 +863,14 @@
 
         if (distSq < (drone.radius * drone.radius)) {
           const normal = new THREE.Vector3().subVectors(drone.pos, closestPoint);
-          const dist = Math.sqrt(distSq);
+          const dist   = Math.sqrt(distSq);
           normal.divideScalar(dist > 0.0001 ? dist : 1.0);
 
           drone.pos.addScaledVector(normal, drone.radius - dist);
 
           if (drone.vel.length() > 2.0) {
             setFlightState(FlightState.CRASHED);
-            drone.vel.set((Math.random() - 0.5) * 1.5, -1.2, (Math.random() - 0.5) * 1.5);
+            drone.vel.set((Math.random()-0.5)*1.5, -1.2, (Math.random()-0.5)*1.5);
             return;
           } else {
             const vDotN = drone.vel.dot(normal);
@@ -466,7 +890,7 @@
         drone.vel.y -= 9.8 * dt;
         drone.pos.addScaledVector(drone.vel, dt);
         drone.pitch += 6.0 * dt;
-        drone.roll += 4.0 * dt;
+        drone.roll  += 4.0 * dt;
 
         if (drone.pos.y <= 0.02) {
           drone.pos.y = 0.02;
@@ -481,20 +905,28 @@
       // Suavizado de sticks
       const filterFactor = 1.0 - Math.exp(-CONFIG.INPUT_FILTER * dt);
       filteredInput.throttle += (rawInput.throttle - filteredInput.throttle) * filterFactor;
-      filteredInput.yaw += (rawInput.yaw - filteredInput.yaw) * filterFactor;
-      filteredInput.pitch += (rawInput.pitch - filteredInput.pitch) * filterFactor;
-      filteredInput.roll += (rawInput.roll - filteredInput.roll) * filterFactor;
+      filteredInput.yaw      += (rawInput.yaw      - filteredInput.yaw)      * filterFactor;
+      filteredInput.pitch    += (rawInput.pitch    - filteredInput.pitch)    * filterFactor;
+      filteredInput.roll     += (rawInput.roll     - filteredInput.roll)     * filterFactor;
 
-      // Verificación de zona de falla de VPS
-      const inSlick = (drone.pos.x >= slickBounds.minX && drone.pos.x <= slickBounds.maxX &&
-                       drone.pos.z >= slickBounds.minZ && drone.pos.z <= slickBounds.maxZ &&
-                       drone.pos.y <= 2.5);
+      // Verificación VPS en cualquier zona de perturbación del nivel
+      let inSlick = false;
+      for (const sz of levelSlickZones) {
+        const b = sz.bounds;
+        if (drone.pos.x >= b.minX && drone.pos.x <= b.maxX &&
+            drone.pos.z >= b.minZ && drone.pos.z <= b.maxZ &&
+            drone.pos.y <= 2.5) {
+          inSlick = true;
+          break;
+        }
+      }
 
       drone.vpsActive = !inSlick;
       vpsWarningEl.style.display = inSlick ? 'block' : 'none';
 
-      // Ráfaga periódica de viento
-      const gust = Math.sin(elapsedTime * 1.5) * 0.2;
+      // Ráfaga periódica de viento (más intensa en niveles avanzados)
+      const gustAmp = LEVEL_DEFS[currentLevel].windScale * 0.12;
+      const gust = Math.sin(elapsedTime * 1.5) * gustAmp;
       const currentWind = windVector.clone().multiplyScalar(1.0 + gust);
 
       switch (drone.state) {
@@ -502,7 +934,7 @@
           drone.pos.y = 0.02;
           drone.vel.set(0, 0, 0);
           drone.pitch = 0;
-          drone.roll = 0;
+          drone.roll  = 0;
           break;
 
         case FlightState.TAKING_OFF:
@@ -518,7 +950,7 @@
         case FlightState.LANDING:
           drone.vel.x *= Math.max(0, 1.0 - CONFIG.NORMAL_DRAG * dt);
           drone.vel.z *= Math.max(0, 1.0 - CONFIG.NORMAL_DRAG * dt);
-          drone.vel.y = -CONFIG.LANDING_SPEED;
+          drone.vel.y  = -CONFIG.LANDING_SPEED;
           drone.pos.addScaledVector(drone.vel, dt);
 
           if (drone.pos.y <= 0.02) {
@@ -531,62 +963,54 @@
 
         case FlightState.FLYING:
           drone.yawRate += (-filteredInput.yaw * CONFIG.MAX_YAW_RATE - drone.yawRate) * (CONFIG.ACCEL_DAMP * dt);
-          drone.yaw += drone.yawRate * dt;
+          drone.yaw     += drone.yawRate * dt;
 
-          const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
-          const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+          const forward = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
+          const right   = new THREE.Vector3(1,0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
 
-          const targetVx = filteredInput.roll * CONFIG.MAX_SPEED;
+          const targetVx = filteredInput.roll  * CONFIG.MAX_SPEED;
           const targetVz = -filteredInput.pitch * CONFIG.MAX_SPEED;
-          const targetVy = filteredInput.throttle * CONFIG.MAX_VERT_SPEED;
+          const targetVy =  filteredInput.throttle * CONFIG.MAX_VERT_SPEED;
 
           const targetWorldVel = new THREE.Vector3()
-            .addScaledVector(right, targetVx)
+            .addScaledVector(right,    targetVx)
             .addScaledVector(forward, -targetVz);
           targetWorldVel.y = targetVy;
 
-          drone.vel.lerp(targetWorldVel, (1.0 - Math.exp(-CONFIG.ACCEL_DAMP * dt)));
+          drone.vel.lerp(targetWorldVel, 1.0 - Math.exp(-CONFIG.ACCEL_DAMP * dt));
 
-          // Efecto de viento y VPS
           const activeDrag = drone.vpsActive ? CONFIG.NORMAL_DRAG : CONFIG.VPS_FAIL_DRAG;
 
           if (filteredInput.roll === 0 && filteredInput.pitch === 0) {
-            // Freno automático si hay VPS; si no hay VPS, deriva libre
-            drone.vel.x *= Math.max(0, 1.0 - (activeDrag * dt));
-            drone.vel.z *= Math.max(0, 1.0 - (activeDrag * dt));
-
+            drone.vel.x *= Math.max(0, 1.0 - activeDrag * dt);
+            drone.vel.z *= Math.max(0, 1.0 - activeDrag * dt);
             if (!drone.vpsActive) {
-              // El viento arrastra el dron sin corrección automática
               drone.vel.addScaledVector(currentWind, dt * 1.8);
             }
           }
 
           if (filteredInput.throttle === 0) {
-            drone.vel.y *= Math.max(0, 1.0 - (CONFIG.NORMAL_DRAG * dt));
+            drone.vel.y *= Math.max(0, 1.0 - CONFIG.NORMAL_DRAG * dt);
           }
 
           drone.pos.addScaledVector(drone.vel, dt);
 
-          if (drone.pos.y < 0.08) {
-            drone.pos.y = 0.08;
-            drone.vel.y = 0;
-          }
+          if (drone.pos.y < 0.08) { drone.pos.y = 0.08; drone.vel.y = 0; }
           break;
       }
 
       checkAndResolveCollisions();
 
-      // Pitch / Roll
-      const forwardNorm = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
-      const rightNorm = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+      // Pitch / Roll visual
+      const forwardNorm = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
+      const rightNorm   = new THREE.Vector3(1,0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
       const localVx = drone.vel.dot(rightNorm);
       const localVz = drone.vel.dot(forwardNorm);
 
-      const targetRoll = -(localVx / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
-      const targetPitch = (localVz / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
-      
+      const targetRoll  = -(localVx / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
+      const targetPitch =  (localVz / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
       const tiltLerp = 1.0 - Math.exp(-6.0 * dt);
-      drone.roll += (targetRoll - drone.roll) * tiltLerp;
+      drone.roll  += (targetRoll  - drone.roll)  * tiltLerp;
       drone.pitch += (targetPitch - drone.pitch) * tiltLerp;
 
       droneGroup.position.copy(drone.pos);
@@ -598,73 +1022,57 @@
       updateVisualAids();
 
       // Cámara
-      const lookTarget = drone.pos.clone().add(new THREE.Vector3(0, 0.15, 0));
-      const camOffset = new THREE.Vector3(0, 0.75, 1.8).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+      const lookTarget  = drone.pos.clone().add(new THREE.Vector3(0, 0.15, 0));
+      const camOffset   = new THREE.Vector3(0, 0.75, 1.8).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
       const targetCamPos = drone.pos.clone().add(camOffset);
       if (targetCamPos.y < 0.25) targetCamPos.y = 0.25;
-
       camera.position.lerp(targetCamPos, 0.06);
       camera.lookAt(lookTarget);
     }
 
-    // Actualizar proyección de sombras y referencias espaciales
     function updateVisualAids() {
       const alt = Math.max(drone.pos.y, 0.02);
 
-      // 1. Sombra en el suelo: se agranda y desvanece con la altura
       shadowDisc.position.set(drone.pos.x, 0.015, drone.pos.z);
       const scale = 1.0 + alt * 0.45;
       shadowDisc.scale.set(scale, scale, 1);
       shadowMat.opacity = Math.max(0.15, 0.7 - alt * 0.2);
 
-      // 2. Haz VPS: une el dron con el piso
       if (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF) {
         vpsBeam.visible = true;
-        vpsBeam.position.set(drone.pos.x, alt / 2, drone.pos.z);
+        vpsBeam.position.set(drone.pos.x, alt/2, drone.pos.z);
         vpsBeam.scale.set(1.0, alt, 1.0);
         vpsBeamMat.color.setHex(drone.vpsActive ? 0x00e5ff : 0xff3d00);
       } else {
         vpsBeam.visible = false;
       }
 
-      // 3. Flecha de rumbo en el suelo
       headingArrow.position.set(drone.pos.x, 0.02, drone.pos.z);
       headingArrow.rotation.set(0, drone.yaw, 0);
     }
 
-    // --- 7. SISTEMA DE MISIONES EN ESPAÑOL ---
-    const missions = [
-      {
-        title: "MISIÓN 1 / 3",
-        desc: "Despega y atraviesa lentamente el Aro 1",
-        check: () => {
-          const d = drone.pos.distanceTo(gate1.center);
-          return (d < gate1.radius && Math.abs(drone.pos.z - gate1.center.z) < 0.4);
-        },
-        onComplete: () => gate1.setSuccess()
-      },
-      {
-        title: "MISIÓN 2 / 3",
-        desc: "Cruza la zona celeste (¡El viento provocará deriva!) hacia el Aro 2",
-        check: () => {
-          const d = drone.pos.distanceTo(gate2.center);
-          return (d < gate2.radius && Math.abs(drone.pos.z - gate2.center.z) < 0.4);
-        },
-        onComplete: () => gate2.setSuccess()
-      },
-      {
-        title: "MISIÓN 3 / 3",
-        desc: "Aterriza con suavidad en el helipuerto amarillo final",
-        check: () => false
-      }
-    ];
+    // =====================================================================
+    // --- 7. ANIMACIÓN DEL ARO MÓVIL (Nivel 3) ---
+    // =====================================================================
+    function updateMovingGate(elapsedTime) {
+      if (!movingGate) return;
+      // Movimiento sinusoidal lateral
+      const newX = Math.sin(elapsedTime * 0.7) * 3.5;
+      movingGate.group.position.x = newX;
+      movingGate.center.x = newX;
 
-    let currentMissionIdx = 0;
-    let missionTimer = 0;
-    let timerRunning = false;
+      // Reubicar bounding boxes de este gate
+      movingGate.group.children.forEach(part => {
+        part.updateWorldMatrix(true, false);
+      });
+    }
+
+    // =====================================================================
+    // --- 8. SISTEMA DE MISIONES ---
+    // =====================================================================
 
     const missionTitleEl = document.getElementById('mission-title');
-    const missionDescEl = document.getElementById('mission-desc');
+    const missionDescEl  = document.getElementById('mission-desc');
     const missionTimerEl = document.getElementById('mission-timer');
 
     function updateMissionLogic(dt) {
@@ -672,7 +1080,7 @@
         missionTimer += dt;
         const mins = Math.floor(missionTimer / 60);
         const secs = (missionTimer % 60).toFixed(1);
-        missionTimerEl.textContent = `TIEMPO: ${mins.toString().padStart(2, '0')}:${secs.padStart(4, '0')}`;
+        missionTimerEl.textContent = `TIEMPO: ${mins.toString().padStart(2,'0')}:${secs.padStart(4,'0')}`;
       }
 
       if (currentMissionIdx < missions.length) {
@@ -682,11 +1090,11 @@
           currentMissionIdx++;
           if (currentMissionIdx < missions.length) {
             missionTitleEl.textContent = missions[currentMissionIdx].title;
-            missionDescEl.textContent = missions[currentMissionIdx].desc;
+            missionDescEl.textContent  = missions[currentMissionIdx].desc;
           } else {
             missionTitleEl.textContent = "¡CIRCUITO COMPLETADO!";
             missionTitleEl.style.color = "#00ffcc";
-            missionDescEl.textContent = "¡Todos los puntos de control aprobados!";
+            missionDescEl.textContent  = "¡Todos los puntos de control aprobados!";
             timerRunning = false;
           }
         }
@@ -694,19 +1102,52 @@
     }
 
     function checkMissionLanding() {
-      if (currentMissionIdx === 2) {
-        const dist = Math.hypot(drone.pos.x - landingPad.position.x, drone.pos.z - landingPad.position.z);
-        if (dist <= 1.0) {
+      const lastMission = missions.length - 1;
+      if (currentMissionIdx === lastMission && levelLandingPad) {
+        const padPos = levelLandingPad.position;
+        const landRadius = levelLandingPad._precisionRadius || 1.0;
+        const dist = Math.hypot(drone.pos.x - padPos.x, drone.pos.z - padPos.z);
+        if (dist <= landRadius) {
           currentMissionIdx++;
-          missionTitleEl.textContent = "¡MISIÓN SUPERADA!";
-          missionTitleEl.style.color = "#00e676";
-          missionDescEl.textContent = "¡Aterrizaje de alta precisión logrado!";
+          missionTimer += 0; // freeze
           timerRunning = false;
+
+          const isLastLevel = (currentLevel >= LEVEL_DEFS.length - 1);
+          if (isLastLevel) {
+            missionTitleEl.textContent = "🏆 ¡ACADEMIA COMPLETADA!";
+            missionTitleEl.style.color = "#ffd700";
+            missionDescEl.textContent  = "¡Has dominado todos los niveles! Eres un piloto élite.";
+            // Botón reiniciar al nivel 1
+            setTimeout(() => showCompletionOverlay(), 1200);
+          } else {
+            missionTitleEl.textContent = "¡NIVEL SUPERADO!";
+            missionTitleEl.style.color = "#00e676";
+            missionDescEl.textContent  = `¡Prepárate para el ${LEVEL_DEFS[currentLevel + 1].name}!`;
+            setTimeout(() => {
+              currentLevel++;
+              showLevelOverlay(currentLevel, true);
+            }, 1500);
+          }
         }
       }
     }
 
-    // --- 8. UI Y CONTROL DE ESTADOS ---
+    function showCompletionOverlay() {
+      ovLevelTitle.textContent  = "🏆 ACADEMIA COMPLETADA";
+      ovSubtitle.textContent    = "¡Piloto de élite!";
+      ovDesc.textContent        = "Has superado todos los niveles con éxito. ¡Felicidades!";
+      ovObjectives.innerHTML    = "";
+      btnStartLevel.textContent = "↺ JUGAR DE NUEVO";
+      btnPrevLevel.style.display = 'none';
+      levelOverlay.classList.add('active');
+      // Al pulsar "jugar de nuevo", vuelve al nivel 1
+      currentLevel = 0;
+    }
+
+    // =====================================================================
+    // --- 9. UI Y CONTROL DE ESTADOS ---
+    // =====================================================================
+
     const btnFlight = document.getElementById('btn-flight');
 
     function setFlightState(newState) {
@@ -748,25 +1189,23 @@
       } else if (drone.state === FlightState.FLYING) {
         setFlightState(FlightState.LANDING);
       } else if (drone.state === FlightState.CRASHED) {
-        drone.pos.set(0, 0.02, 0);
-        drone.vel.set(0, 0, 0);
-        drone.yaw = 0;
-        drone.yawRate = 0;
-        setFlightState(FlightState.LANDED);
+        loadLevel(currentLevel);
       }
     });
 
-    // --- 9. JOYSTICKS MULTITÁCTILES CON ZONA MUERTA ---
+    // =====================================================================
+    // --- 10. JOYSTICKS MULTITÁCTILES ---
+    // =====================================================================
     class VirtualJoystick {
       constructor(zoneId, knobId, onMove) {
-        this.zone = document.getElementById(zoneId);
-        this.knob = document.getElementById(knobId);
-        this.onMove = onMove;
+        this.zone      = document.getElementById(zoneId);
+        this.knob      = document.getElementById(knobId);
+        this.onMove    = onMove;
         this.pointerId = null;
-        this.radius = 70;
+        this.radius    = 70;
         this.deadzoneRatio = 0.14;
-        this.exponent = 1.8;
-        this.origin = { x: 0, y: 0 };
+        this.exponent  = 1.8;
+        this.origin    = { x:0, y:0 };
         this.bindEvents();
       }
 
@@ -775,28 +1214,21 @@
           if (this.pointerId !== null) return;
           this.pointerId = e.pointerId;
           this.zone.setPointerCapture(e.pointerId);
-
           const rect = this.zone.getBoundingClientRect();
-          this.origin = {
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2
-          };
+          this.origin = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
           this.update(this.origin.x, this.origin.y);
         });
-
         this.zone.addEventListener('pointermove', (e) => {
           if (e.pointerId !== this.pointerId) return;
           this.update(e.clientX, e.clientY);
         });
-
         const release = (e) => {
           if (e.pointerId !== this.pointerId) return;
           this.pointerId = null;
           this.knob.style.transform = `translate(-50%, -50%)`;
           this.onMove(0, 0);
         };
-
-        this.zone.addEventListener('pointerup', release);
+        this.zone.addEventListener('pointerup',     release);
         this.zone.addEventListener('pointercancel', release);
       }
 
@@ -804,59 +1236,44 @@
         let dx = clientX - this.origin.x;
         let dy = clientY - this.origin.y;
         const dist = Math.hypot(dx, dy);
-
-        let visualDx = dx;
-        let visualDy = dy;
-        if (dist > this.radius) {
-          visualDx = (dx / dist) * this.radius;
-          visualDy = (dy / dist) * this.radius;
-        }
-
-        this.knob.style.transform = `translate(calc(-50% + ${visualDx}px), calc(-50% + ${visualDy}px))`;
-
+        let vDx = dx, vDy = dy;
+        if (dist > this.radius) { vDx = dx/dist*this.radius; vDy = dy/dist*this.radius; }
+        this.knob.style.transform = `translate(calc(-50% + ${vDx}px), calc(-50% + ${vDy}px))`;
         const normDist = Math.min(dist / this.radius, 1.0);
-        if (normDist < this.deadzoneRatio) {
-          this.onMove(0, 0);
-          return;
-        }
-
-        const effectiveDist = (normDist - this.deadzoneRatio) / (1.0 - this.deadzoneRatio);
-        const shapedMagnitude = Math.pow(effectiveDist, this.exponent);
-
+        if (normDist < this.deadzoneRatio) { this.onMove(0, 0); return; }
+        const eff = (normDist - this.deadzoneRatio) / (1.0 - this.deadzoneRatio);
+        const mag = Math.pow(eff, this.exponent);
         const angle = Math.atan2(dy, dx);
-        this.onMove(Math.cos(angle) * shapedMagnitude, Math.sin(angle) * shapedMagnitude);
+        this.onMove(Math.cos(angle)*mag, Math.sin(angle)*mag);
       }
     }
 
-    new VirtualJoystick('left-zone', 'left-knob', (x, y) => {
-      rawInput.yaw = x;
-      rawInput.throttle = -y;
-    });
+    new VirtualJoystick('left-zone',  'left-knob',  (x,y) => { rawInput.yaw=x;  rawInput.throttle=-y; });
+    new VirtualJoystick('right-zone', 'right-knob', (x,y) => { rawInput.roll=x; rawInput.pitch=-y; });
 
-    new VirtualJoystick('right-zone', 'right-knob', (x, y) => {
-      rawInput.roll = x;
-      rawInput.pitch = -y;
-    });
-
-    // --- 10. BUCLE DE ANIMACIÓN ---
+    // =====================================================================
+    // --- 11. BUCLE DE ANIMACIÓN ---
+    // =====================================================================
     const telemetryEl = document.getElementById('telemetry');
     const clock = new THREE.Clock();
 
     function loop() {
       requestAnimationFrame(loop);
-      const dt = Math.min(clock.getDelta(), 0.1);
+      const dt          = Math.min(clock.getDelta(), 0.1);
       const elapsedTime = clock.getElapsedTime();
 
+      updateMovingGate(elapsedTime);
       updateFlightPhysics(dt, elapsedTime);
       updateMissionLogic(dt);
       renderer.render(scene, camera);
 
-      const speed = Math.hypot(drone.vel.x, drone.vel.z).toFixed(2);
-      const yawDeg = Math.round(((-drone.yaw * 180 / Math.PI) % 360 + 360) % 360);
+      const speed  = Math.hypot(drone.vel.x, drone.vel.z).toFixed(2);
+      const yawDeg = Math.round(((-drone.yaw * 180/Math.PI) % 360 + 360) % 360);
+      const lvlDef = LEVEL_DEFS[currentLevel];
       telemetryEl.innerHTML = `
-        TELLO: ${drone.state}<br>
+        TELLO: ${drone.state} | ${lvlDef.name}<br>
         ALT: ${drone.pos.y.toFixed(2)} m | VEL: ${speed} m/s<br>
-        RUMBO: ${yawDeg}° | VPS: ${drone.vpsActive ? 'BLOQUEADO' : 'CIEGO'}
+        RUMBO: ${yawDeg}° | VPS: ${drone.vpsActive ? 'ACTIVO' : '⚠ CIEGO'}
       `;
     }
 
