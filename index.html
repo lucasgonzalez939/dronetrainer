@@ -2047,9 +2047,6 @@
         motorStartupTimer += dt;
         const ramp = Math.min(motorStartupTimer / 0.4, 1.0);
         motorLights.forEach(l => { l.intensity = ramp * 0.6; });
-      } else if (drone.state === FlightState.FLYING) {
-        motorStartupTimer = 0;
-        motorLights.forEach(l => { l.intensity = 0; });
       } else {
         motorStartupTimer = 0;
         motorLights.forEach(l => { l.intensity = 0; });
@@ -3117,9 +3114,9 @@
     }
 
     // ── B2. Wind drift indicator ──
-    function updateDriftIndicator(inVPS) {
+    function updateDriftIndicator(vpsLost) {
       const el = document.getElementById('wind-drift-hud');
-      if (!inVPS) { el.classList.remove('active'); return; }
+      if (!vpsLost) { el.classList.remove('active'); return; }
       el.classList.add('active');
 
       const s = 44, cx = 22, cy = 22, r = 16;
