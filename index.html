@@ -631,6 +631,32 @@
         </div>
       </div>
 
+      <!-- Joystick controls -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">MANDOS</div>
+
+        <div class="cfg-slider-row">
+          <label>Sensibilidad</label>
+          <input type="range" id="cfg-joy-sensitivity" min="0.3" max="2.0" step="0.05" value="1.0">
+          <span class="cfg-slider-value" id="cfg-joy-sensitivity-val">1.0</span>
+        </div>
+
+        <div class="cfg-slider-row">
+          <label>Curva</label>
+          <input type="range" id="cfg-joy-curve" min="1.0" max="4.0" step="0.1" value="3.0">
+          <span class="cfg-slider-value" id="cfg-joy-curve-val">3.0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.3);margin-top:-4px;padding:0 2px 6px;">
+          <span>LINEAL</span><span>EXPONENCIAL</span>
+        </div>
+
+        <div class="cfg-slider-row">
+          <label>Zona muerta</label>
+          <input type="range" id="cfg-joy-deadzone" min="0" max="0.25" step="0.01" value="0.05">
+          <span class="cfg-slider-value" id="cfg-joy-deadzone-val">5%</span>
+        </div>
+      </div>
+
       <!-- Difficulty toggles -->
       <div class="cfg-section">
         <div class="cfg-section-title">DIFICULTAD</div>
@@ -2139,6 +2165,27 @@
       DIFFICULTY.vpsOn = e.target.checked;
     });
 
+    // Joystick sensitivity sliders
+    const cfgJoySens    = document.getElementById('cfg-joy-sensitivity');
+    const cfgJoySensVal = document.getElementById('cfg-joy-sensitivity-val');
+    const cfgJoyCurve   = document.getElementById('cfg-joy-curve');
+    const cfgJoyCurveVal= document.getElementById('cfg-joy-curve-val');
+    const cfgJoyDead    = document.getElementById('cfg-joy-deadzone');
+    const cfgJoyDeadVal = document.getElementById('cfg-joy-deadzone-val');
+
+    cfgJoySens.addEventListener('input', () => {
+      JOY_CONFIG.sensitivity = +cfgJoySens.value;
+      cfgJoySensVal.textContent = (+cfgJoySens.value).toFixed(2);
+    });
+    cfgJoyCurve.addEventListener('input', () => {
+      JOY_CONFIG.exponent = +cfgJoyCurve.value;
+      cfgJoyCurveVal.textContent = (+cfgJoyCurve.value).toFixed(1);
+    });
+    cfgJoyDead.addEventListener('input', () => {
+      JOY_CONFIG.deadzone = +cfgJoyDead.value;
+      cfgJoyDeadVal.textContent = Math.round(cfgJoyDead.value * 100) + '%';
+    });
+
     // Return-to-home button: initiate landing
     document.getElementById('btn-rth').addEventListener('click', () => {
       if (drone.state === FlightState.FLYING) {
@@ -2149,15 +2196,20 @@
     // =====================================================================
     // --- 11. JOYSTICKS MULTITÁCTILES ---
     // =====================================================================
+    // ── JOYSTICK SENSITIVITY CONFIG ──
+    const JOY_CONFIG = {
+      sensitivity: 1.0,   // output gain multiplier
+      exponent:    3.0,   // response curve (1 = linear, higher = gentle start + aggressive far)
+      deadzone:    0.05   // fraction of radius that is dead
+    };
+
     class VirtualJoystick {
       constructor(zoneId, knobId, onMove) {
         this.zone      = document.getElementById(zoneId);
         this.knob      = document.getElementById(knobId);
         this.onMove    = onMove;
         this.pointerId = null;
-        this.radius    = 70;
-        this.deadzoneRatio = 0.14;
-        this.exponent  = 1.8;
+        this.radius    = 75;  // slightly larger travel zone
         this.origin    = { x:0, y:0 };
         this.bindEvents();
       }
@@ -2193,9 +2245,11 @@
         if (dist > this.radius) { vDx = dx/dist*this.radius; vDy = dy/dist*this.radius; }
         this.knob.style.transform = `translate(calc(-50% + ${vDx}px), calc(-50% + ${vDy}px))`;
         const normDist = Math.min(dist / this.radius, 1.0);
-        if (normDist < this.deadzoneRatio) { this.onMove(0, 0); return; }
-        const eff = (normDist - this.deadzoneRatio) / (1.0 - this.deadzoneRatio);
-        const mag = Math.pow(eff, this.exponent);
+        const dz = JOY_CONFIG.deadzone;
+        if (normDist < dz) { this.onMove(0, 0); return; }
+        // Map [dz..1] → [0..1], apply power curve, then apply sensitivity gain (clamped to [-1,1])
+        const eff = (normDist - dz) / (1.0 - dz);
+        const mag = Math.min(Math.pow(eff, JOY_CONFIG.exponent) * JOY_CONFIG.sensitivity, 1.0);
         const angle = Math.atan2(dy, dx);
         this.onMove(Math.cos(angle)*mag, Math.sin(angle)*mag);
       }
