@@ -31,9 +31,10 @@ const PRECACHE_URLS = [
   '/dronetrainer/src/modules/flightState.js',
   '/dronetrainer/src/modules/overlays.js',
   '/dronetrainer/src/modules/progress.js',
-  '/dronetrainer/src/modules/loop.js',
-  // Three.js ESM build from CDN (cached after first network fetch)
-  'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js'
+  '/dronetrainer/src/modules/loop.js'
+  // Note: the Three.js CDN URL is NOT precached here to avoid failing
+  // installation when the CDN is unreachable. It is cached lazily by
+  // the fetch handler on first successful network request.
 ];
 
 // Install: precache all listed assets

@@ -182,7 +182,6 @@ export function initScene() {
   topCap.position.y = 0.025;
   droneGroup.add(topCap);
 
-  const noseMat     = new THREE.MeshStandardMaterial({ color: 0xff1744 });
   const frontArmMat = new THREE.MeshStandardMaterial({ color: 0xff1744 });
   const rearArmMat  = new THREE.MeshStandardMaterial({ color: 0x424242 });
   [
