@@ -209,6 +209,74 @@
       pointer-events: none;
       transition: transform 0.05s ease-out;
     }
+    .btn-overlay.freestyle {
+      background: #00897b;
+      font-size: 14px;
+      padding: 13px 30px;
+    }
+    /* Freestyle HUD */
+    #freestyle-hud {
+      display: none;
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      min-width: 280px;
+      color: #00ffcc;
+      background: rgba(10, 20, 30, 0.85);
+      border: 1px solid rgba(0, 255, 204, 0.3);
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    #freestyle-hud .fs-title {
+      color: #80cbc4;
+      font-weight: bold;
+      font-size: 11px;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    #freestyle-hud .fs-score {
+      font-size: 22px;
+      font-weight: bold;
+      color: #ffd54f;
+    }
+    /* Freestyle control panel */
+    #freestyle-panel {
+      display: none;
+      position: absolute;
+      bottom: 230px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: auto;
+      display: none;
+      flex-direction: row;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn-freestyle-ctrl {
+      pointer-events: auto;
+      border: none;
+      padding: 9px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+      color: #fff;
+    }
+    #btn-new-map    { background: #0288d1; }
+    #btn-exit-free  { background: #546e7a; }
+    .wind-btn {
+      background: #37474f;
+      font-size: 11px;
+      padding: 7px 12px;
+    }
+    .wind-btn.active { background: #00695c; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -220,6 +288,7 @@
     <p id="ov-desc">Aprende los controles básicos.</p>
     <ul id="ov-objectives"></ul>
     <button class="btn-overlay" id="btn-start-level">COMENZAR</button>
+    <button class="btn-overlay freestyle" id="btn-freestyle" style="display:none">🎮 MODO LIBRE</button>
     <button class="btn-overlay secondary" id="btn-prev-level" style="display:none">◀ NIVEL ANTERIOR</button>
   </div>
 
@@ -240,6 +309,22 @@
     </div>
 
     <button class="btn-flight" id="btn-flight">DESPEGAR</button>
+
+    <!-- Freestyle mode HUD -->
+    <div id="freestyle-hud">
+      <div class="fs-title">🎮 MODO LIBRE</div>
+      <div>AROS: <span class="fs-score" id="fs-gates">0</span> &nbsp; TIEMPO: <span id="fs-time">00:00.0</span></div>
+      <div style="font-size:11px; color:#80cbc4; margin-top:2px;">MEJOR TRAMO: <span id="fs-best">--</span></div>
+    </div>
+
+    <!-- Freestyle control panel (wind preset + map reset + exit) -->
+    <div id="freestyle-panel">
+      <button class="btn-freestyle-ctrl wind-btn active" data-wind="calm"  id="wind-calm">🌬 CALMA</button>
+      <button class="btn-freestyle-ctrl wind-btn"        data-wind="mod"   id="wind-mod">💨 MODERADO</button>
+      <button class="btn-freestyle-ctrl wind-btn"        data-wind="storm" id="wind-storm">🌪 TORMENTA</button>
+      <button class="btn-freestyle-ctrl" id="btn-new-map">🗺 NUEVO MAPA</button>
+      <button class="btn-freestyle-ctrl" id="btn-exit-free">✕ SALIR</button>
+    </div>
 
     <div class="joystick-zone" id="left-zone">
       <div class="stick-label">ALTURA / GIRO (YAW)</div>
@@ -785,7 +870,8 @@
 
     function loadLevel(idx) {
       clearLevel();
-      currentLevel = idx;
+      isFreestyleMode   = false;
+      currentLevel      = idx;
       currentMissionIdx = 0;
       missionTimer  = 0;
       timerRunning  = false;
@@ -795,7 +881,11 @@
 
       def.setup();
 
-      // Actualizar HUD
+      // Restaurar HUD de misión (por si venimos del modo libre)
+      document.getElementById('mission-hud').style.display    = 'block';
+      document.getElementById('freestyle-hud').style.display  = 'none';
+      document.getElementById('freestyle-panel').style.display = 'none';
+
       missionTitleEl.textContent = missions[0].title;
       missionDescEl.textContent  = missions[0].desc;
       missionTitleEl.style.color = '#ffca28';
@@ -827,7 +917,9 @@
       ovDesc.textContent       = def.desc;
       ovObjectives.innerHTML   = def.objectives.map(o => `<li>${o}</li>`).join('');
       btnStartLevel.textContent = isTransition ? '▶ EMPEZAR NIVEL' : 'COMENZAR';
-      btnPrevLevel.style.display = (idx > 0) ? 'inline-block' : 'none';
+      btnPrevLevel.style.display  = (idx > 0) ? 'inline-block' : 'none';
+      // Hide freestyle button on regular level overlays; shown only after completion
+      document.getElementById('btn-freestyle').style.display = 'none';
       levelOverlay.classList.add('active');
     }
 
@@ -1138,16 +1230,248 @@
       ovLevelTitle.textContent  = "🏆 ACADEMIA COMPLETADA";
       ovSubtitle.textContent    = "¡Piloto de élite!";
       ovDesc.textContent        = "Has superado todos los niveles con éxito. ¡Felicidades!";
-      ovObjectives.innerHTML    = "";
+      ovObjectives.innerHTML    = "<li>Puedes seguir practicando en Modo Libre</li><li>Obstáculos aleatorios y viento configurable</li>";
       btnStartLevel.textContent = "↺ JUGAR DE NUEVO";
-      btnPrevLevel.style.display = 'none';
+      btnFreestyleBtn.style.display = 'inline-block';
+      btnPrevLevel.style.display    = 'none';
       levelOverlay.classList.add('active');
-      // Al pulsar "jugar de nuevo", vuelve al nivel 1
       currentLevel = 0;
     }
 
     // =====================================================================
-    // --- 9. UI Y CONTROL DE ESTADOS ---
+    // --- 9. MODO LIBRE (FREESTYLE) ---
+    // =====================================================================
+
+    let isFreestyleMode   = false;
+    let fsGatesPassed     = 0;
+    let fsSessionTime     = 0;
+    let fsBestLapTime     = Infinity;
+    let fsLastGateTime    = 0;
+    let fsFreestyleGates  = []; // gate objects with passed flag
+    let fsWindPreset      = 'calm';
+
+    const FREESTYLE_WIND_PRESETS = {
+      calm:  { dir: new THREE.Vector3(0.15, 0, 0.08), scale: 0.3 },
+      mod:   { dir: new THREE.Vector3(0.5,  0, 0.25), scale: 1.4 },
+      storm: { dir: new THREE.Vector3(0.9,  0, 0.4),  scale: 3.2 }
+    };
+
+    // Random helpers
+    function rnd(min, max) { return min + Math.random() * (max - min); }
+    function rndInt(min, max) { return Math.floor(rnd(min, max + 1)); }
+
+    function loadFreestyle() {
+      clearLevel();
+      isFreestyleMode   = true;
+      fsGatesPassed     = 0;
+      fsSessionTime     = 0;
+      fsBestLapTime     = Infinity;
+      fsLastGateTime    = 0;
+      fsFreestyleGates  = [];
+      missionTimer      = 0;
+      timerRunning      = true;
+      missions          = [];  // no missions in freestyle
+
+      // Apply wind preset
+      const wp = FREESTYLE_WIND_PRESETS[fsWindPreset];
+      windVector = wp.dir.clone().multiplyScalar(wp.scale);
+
+      // --- Random gates (6–9) ---
+      const numGates = rndInt(6, 9);
+      const usedPositions = [];
+      for (let i = 0; i < numGates; i++) {
+        let x, z;
+        let tries = 0;
+        do {
+          x = rnd(-14, 14);
+          z = rnd(-8, -40);
+          tries++;
+        } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < 4));
+        usedPositions.push([x, z]);
+        const y    = rnd(0.8, 3.0);
+        const rotY = rnd(-Math.PI, Math.PI);
+        const size = rnd(0.9, 1.5);
+        const gate = createFlightGate(x, y, z, rotY, size);
+        gate._passed = false;
+        fsFreestyleGates.push(gate);
+      }
+
+      // --- Random pillars (3–5, collision obstacles) ---
+      const numPillars = rndInt(3, 5);
+      for (let i = 0; i < numPillars; i++) {
+        let x, z;
+        let tries = 0;
+        do {
+          x = rnd(-16, 16);
+          z = rnd(-5, -42);
+          tries++;
+        } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < 3));
+        usedPositions.push([x, z]);
+        const h = rnd(1.5, 4.5);
+        const r = rnd(0.15, 0.35);
+        const pillarGeo = new THREE.CylinderGeometry(r, r * 1.1, h, 12);
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x546e7a, roughness: 0.7 });
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(x, h / 2, z);
+        pillar.castShadow = true;
+        scene.add(pillar);
+        levelObjects.push(pillar);
+        pillar.updateWorldMatrix(true, false);
+        obstacles.push({ box: new THREE.Box3().setFromObject(pillar), mesh: pillar });
+      }
+
+      // --- Random barrels (2–4, short squat cylinders) ---
+      const numBarrels = rndInt(2, 4);
+      for (let i = 0; i < numBarrels; i++) {
+        let x, z;
+        let tries = 0;
+        do {
+          x = rnd(-14, 14);
+          z = rnd(-6, -40);
+          tries++;
+        } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < 2.5));
+        usedPositions.push([x, z]);
+        const barrelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.9, 12);
+        const barrelMat = new THREE.MeshStandardMaterial({ color: 0xff7043, roughness: 0.5, metalness: 0.3 });
+        const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+        barrel.position.set(x, 0.45, z);
+        barrel.castShadow = true;
+        scene.add(barrel);
+        levelObjects.push(barrel);
+        barrel.updateWorldMatrix(true, false);
+        obstacles.push({ box: new THREE.Box3().setFromObject(barrel), mesh: barrel });
+      }
+
+      // --- Random walls (1–3 low walls) ---
+      const numWalls = rndInt(1, 3);
+      for (let i = 0; i < numWalls; i++) {
+        let x, z;
+        let tries = 0;
+        do {
+          x = rnd(-13, 13);
+          z = rnd(-7, -38);
+          tries++;
+        } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < 3.5));
+        usedPositions.push([x, z]);
+        const wl  = rnd(2.0, 5.0);
+        const wh  = rnd(0.8, 2.0);
+        const rotY = rnd(0, Math.PI);
+        const wallGeo = new THREE.BoxGeometry(wl, wh, 0.18);
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x78909c, roughness: 0.8 });
+        const wall = new THREE.Mesh(wallGeo, wallMat);
+        wall.position.set(x, wh / 2, z);
+        wall.rotation.y = rotY;
+        wall.castShadow = true;
+        scene.add(wall);
+        levelObjects.push(wall);
+        wall.updateWorldMatrix(true, false);
+        obstacles.push({ box: new THREE.Box3().setFromObject(wall), mesh: wall });
+      }
+
+      // --- 1–2 VPS slick zones at random positions ---
+      const numSlick = rndInt(1, 2);
+      for (let i = 0; i < numSlick; i++) {
+        const sx = rnd(-8, 8);
+        const sz = rnd(-10, -30);
+        const sw = rnd(4, 7);
+        const sd = rnd(4, 7);
+        levelSlickZones.push(createSlickZone(sx, sz, sw, sd));
+      }
+
+      // Reset drone
+      drone.pos.set(0, 0.02, 0);
+      drone.vel.set(0, 0, 0);
+      drone.yaw     = 0;
+      drone.yawRate = 0;
+      drone.pitch   = 0;
+      drone.roll    = 0;
+      setFlightState(FlightState.LANDED);
+
+      // Show freestyle HUD, hide mission HUD
+      document.getElementById('mission-hud').style.display    = 'none';
+      document.getElementById('freestyle-hud').style.display  = 'block';
+      document.getElementById('freestyle-panel').style.display = 'flex';
+      updateFreestyleHUD();
+    }
+
+    function updateFreestyleHUD() {
+      document.getElementById('fs-gates').textContent = fsGatesPassed;
+      const mins = Math.floor(fsSessionTime / 60);
+      const secs = (fsSessionTime % 60).toFixed(1);
+      document.getElementById('fs-time').textContent = `${mins.toString().padStart(2,'0')}:${secs.padStart(4,'0')}`;
+      document.getElementById('fs-best').textContent = fsBestLapTime === Infinity ? '--' : fsBestLapTime.toFixed(2) + 's';
+    }
+
+    function updateFreestyleLogic(dt) {
+      if (!isFreestyleMode) return;
+
+      fsSessionTime += dt;
+
+      for (const gate of fsFreestyleGates) {
+        if (gate._passed) continue;
+        const d = drone.pos.distanceTo(gate.center);
+        if (d < gate.radius && Math.abs(drone.pos.z - gate.center.z) < 0.6) {
+          gate._passed = true;
+          gate.setSuccess();
+          fsGatesPassed++;
+
+          const elapsed = fsSessionTime - fsLastGateTime;
+          if (fsLastGateTime > 0 && elapsed < fsBestLapTime) {
+            fsBestLapTime = elapsed;
+          }
+          fsLastGateTime = fsSessionTime;
+
+          // Allow gate re-use after 3 s so the map stays fun indefinitely
+          setTimeout(() => { gate._passed = false; }, 3000);
+        }
+      }
+
+      updateFreestyleHUD();
+    }
+
+    function exitFreestyleMode() {
+      isFreestyleMode = false;
+      clearLevel();
+      document.getElementById('mission-hud').style.display    = 'block';
+      document.getElementById('freestyle-hud').style.display  = 'none';
+      document.getElementById('freestyle-panel').style.display = 'none';
+      setFlightState(FlightState.LANDED);
+      // Return to level select overlay from the beginning
+      currentLevel = 0;
+      showLevelOverlay(0, false);
+    }
+
+    // Wire up freestyle buttons
+    const btnFreestyleBtn = document.getElementById('btn-freestyle');
+    btnFreestyleBtn.addEventListener('click', () => {
+      levelOverlay.classList.remove('active');
+      loadFreestyle();
+    });
+
+    document.getElementById('btn-new-map').addEventListener('click', () => {
+      loadFreestyle();
+    });
+
+    document.getElementById('btn-exit-free').addEventListener('click', () => {
+      exitFreestyleMode();
+    });
+
+    // Wind preset buttons
+    document.querySelectorAll('.wind-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        fsWindPreset = btn.dataset.wind;
+        document.querySelectorAll('.wind-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Apply immediately if already in freestyle
+        if (isFreestyleMode) {
+          const wp = FREESTYLE_WIND_PRESETS[fsWindPreset];
+          windVector = wp.dir.clone().multiplyScalar(wp.scale);
+        }
+      });
+    });
+
+    // =====================================================================
+    // --- 10. UI Y CONTROL DE ESTADOS ---
     // =====================================================================
 
     const btnFlight = document.getElementById('btn-flight');
@@ -1191,7 +1515,11 @@
       } else if (drone.state === FlightState.FLYING) {
         setFlightState(FlightState.LANDING);
       } else if (drone.state === FlightState.CRASHED) {
-        loadLevel(currentLevel);
+        if (isFreestyleMode) {
+          loadFreestyle();
+        } else {
+          loadLevel(currentLevel);
+        }
       }
     });
 
@@ -1266,14 +1594,18 @@
 
       updateMovingGate(elapsedTime);
       updateFlightPhysics(dt, elapsedTime);
-      updateMissionLogic(dt);
+      if (isFreestyleMode) {
+        updateFreestyleLogic(dt);
+      } else {
+        updateMissionLogic(dt);
+      }
       renderer.render(scene, camera);
 
       const speed  = Math.hypot(drone.vel.x, drone.vel.z).toFixed(2);
       const yawDeg = Math.round(((-drone.yaw * 180/Math.PI) % 360 + 360) % 360);
-      const lvlDef = LEVEL_DEFS[currentLevel];
+      const modeName = isFreestyleMode ? '🎮 MODO LIBRE' : LEVEL_DEFS[currentLevel].name;
       telemetryEl.innerHTML = `
-        TELLO: ${drone.state} | ${lvlDef.name}<br>
+        TELLO: ${drone.state} | ${modeName}<br>
         ALT: ${drone.pos.y.toFixed(2)} m | VEL: ${speed} m/s<br>
         RUMBO: ${yawDeg}° | VPS: ${drone.vpsActive ? 'ACTIVO' : '⚠ CIEGO'}
       `;
