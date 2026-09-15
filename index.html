@@ -804,6 +804,139 @@
       cursor: pointer;
       font-family: 'Arial', sans-serif;
     }
+    /* ── VPS SCREEN VIGNETTE ── */
+    #vps-vignette {
+      display: none;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(229,57,53,0.0) 60%, rgba(229,57,53,0.55) 100%);
+      animation: vpsPulse 0.7s ease-in-out infinite alternate;
+    }
+    #vps-vignette.active { display: block; }
+    @keyframes vpsPulse {
+      from { opacity: 0.3; }
+      to   { opacity: 1.0; }
+    }
+
+    /* ── SPEED TAPE ── */
+    #speed-tape {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      pointer-events: none;
+    }
+    #speed-tape-label {
+      font-size: 9px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.5px;
+      font-weight: bold;
+    }
+    #speed-tape-track {
+      width: 10px;
+      height: 80px;
+      background: rgba(255,255,255,0.10);
+      border-radius: 5px;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+    }
+    #speed-tape-fill {
+      width: 100%;
+      border-radius: 5px;
+      transition: height 0.1s, background 0.2s;
+      background: #4caf50;
+    }
+    #speed-tape-val {
+      font-size: 11px;
+      font-weight: bold;
+      color: #fff;
+    }
+    #speed-tape-unit {
+      font-size: 8px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    /* ── ARTIFICIAL HORIZON ── */
+    #horizon-hud {
+      position: absolute;
+      left: 50%;
+      bottom: 230px;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    #horizon-canvas {
+      display: block;
+    }
+
+    /* ── COMPASS ROSE ── */
+    #compass-hud {
+      position: absolute;
+      top: 62px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    #compass-canvas { display: block; }
+
+    /* ── WIND DRIFT ARROW ── */
+    #wind-drift-hud {
+      display: none;
+      position: absolute;
+      right: 56px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    #wind-drift-hud.active { display: flex; }
+    #wind-drift-canvas { display: block; }
+    #wind-drift-label {
+      font-size: 9px;
+      color: rgba(255,100,100,0.85);
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── INPUT VISUALIZER (mini joystick dots) ── */
+    #input-viz {
+      position: absolute;
+      bottom: 225px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .input-viz-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.25);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .input-viz-dot {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00e5ff;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: top 0.05s, left 0.05s;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -1071,6 +1204,43 @@
       <svg class="joy-arrow joy-arrow-right" width="16" height="12" viewBox="0 0 16 12"><polygon points="8,0 16,12 0,12"/></svg>
       <div class="stick-knob" id="right-knob"></div>
     </div>
+
+    <!-- VPS screen-edge vignette -->
+    <div id="vps-vignette"></div>
+
+    <!-- Speed tape (right side) -->
+    <div id="speed-tape">
+      <div id="speed-tape-label">SPD</div>
+      <div id="speed-tape-track"><div id="speed-tape-fill" style="height:0%"></div></div>
+      <div id="speed-tape-val">0.0</div>
+      <div id="speed-tape-unit">m/s</div>
+    </div>
+
+    <!-- Artificial horizon bar -->
+    <div id="horizon-hud">
+      <canvas id="horizon-canvas" width="100" height="50"></canvas>
+    </div>
+
+    <!-- Compass rose (below top bar, above mission HUD) -->
+    <div id="compass-hud">
+      <canvas id="compass-canvas" width="80" height="44"></canvas>
+    </div>
+
+    <!-- Wind drift indicator -->
+    <div id="wind-drift-hud">
+      <canvas id="wind-drift-canvas" width="44" height="44"></canvas>
+      <div id="wind-drift-label">DERIVA</div>
+    </div>
+
+    <!-- Input visualizer (mini joystick dots) -->
+    <div id="input-viz">
+      <div class="input-viz-box" id="input-viz-left">
+        <div class="input-viz-dot" id="input-dot-left"></div>
+      </div>
+      <div class="input-viz-box" id="input-viz-right">
+        <div class="input-viz-dot" id="input-dot-right"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1160,6 +1330,7 @@
     const shadowMat = new THREE.MeshBasicMaterial({
       color: 0x050d0a, transparent: true, opacity: 0.65, depthWrite: false
     });
+    // Use a EllipseGeometry proxy via CircleGeometry (scale in update)
     const shadowDisc = new THREE.Mesh(new THREE.CircleGeometry(0.35, 32), shadowMat);
     shadowDisc.rotation.x = -Math.PI / 2;
     shadowDisc.position.y = 0.015;
@@ -1172,12 +1343,70 @@
     const vpsBeam = new THREE.Mesh(vpsBeamGeo, vpsBeamMat);
     scene.add(vpsBeam);
 
-    const headingArrowGeo = new THREE.ConeGeometry(0.1, 0.3, 8);
-    headingArrowGeo.rotateX(Math.PI / 2);
-    const headingArrowMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.5 });
+    // ── A1. Colored heading arrow: flat red arrow shape on ground ──
+    // Build a flat arrow shape: triangle pointing forward (−Z) in local space
+    const headingArrowShape = new THREE.Shape();
+    headingArrowShape.moveTo(0, 0.32);      // tip (forward = -Z → use Y in 2D)
+    headingArrowShape.lineTo(0.10, 0.0);
+    headingArrowShape.lineTo(0.04, 0.0);
+    headingArrowShape.lineTo(0.04, -0.18);
+    headingArrowShape.lineTo(-0.04, -0.18);
+    headingArrowShape.lineTo(-0.04, 0.0);
+    headingArrowShape.lineTo(-0.10, 0.0);
+    headingArrowShape.closePath();
+    const headingArrowGeo = new THREE.ShapeGeometry(headingArrowShape);
+    headingArrowGeo.rotateX(-Math.PI / 2); // lay flat on ground
+    const headingArrowMat = new THREE.MeshBasicMaterial({
+      color: 0xff1744, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide
+    });
     const headingArrow = new THREE.Mesh(headingArrowGeo, headingArrowMat);
-    headingArrow.position.y = 0.02;
+    headingArrow.position.y = 0.022;
     scene.add(headingArrow);
+
+    // ── A3. Yaw ghost trail arc on ground ──
+    const YAW_ARC_SEGS = 32;
+    const yawArcPositions = new Float32Array(YAW_ARC_SEGS * 3);
+    const yawArcGeo = new THREE.BufferGeometry();
+    yawArcGeo.setAttribute('position', new THREE.BufferAttribute(yawArcPositions, 3));
+    const yawArcMat = new THREE.LineBasicMaterial({ color: 0xff9800, transparent: true, opacity: 0.55, depthWrite: false });
+    const yawArcLine = new THREE.Line(yawArcGeo, yawArcMat);
+    yawArcLine.position.y = 0.024;
+    scene.add(yawArcLine);
+    let yawArcStartAngle = 0;
+    let yawArcAlpha      = 0; // fades out when not yawing
+
+    // ── B1. Motion trail – line strip behind drone ──
+    const TRAIL_LEN = 24;
+    const trailPositions = new Float32Array(TRAIL_LEN * 3);
+    const trailGeo = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+    // draw only first 2 points to start
+    trailGeo.setDrawRange(0, 2);
+    const trailMat = new THREE.LineBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.45, depthWrite: false, vertexColors: false });
+    const trailLine = new THREE.Line(trailGeo, trailMat);
+    scene.add(trailLine);
+    const trailHistory = []; // {x,y,z}
+
+    // ── D2. Altitude halo ring ──
+    const altRingGeo = new THREE.TorusGeometry(0.5, 0.008, 8, 48);
+    const altRingMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.4, depthWrite: false });
+    const altRing = new THREE.Mesh(altRingGeo, altRingMat);
+    scene.add(altRing);
+
+    // ── D1. Wind particle system ──
+    const WIND_PARTICLE_COUNT = 180;
+    const windParticlePositions = new Float32Array(WIND_PARTICLE_COUNT * 3);
+    // Initialise scattered around origin
+    for (let i = 0; i < WIND_PARTICLE_COUNT; i++) {
+      windParticlePositions[i*3+0] = (Math.random() - 0.5) * 40;
+      windParticlePositions[i*3+1] = Math.random() * 4.0 + 0.2;
+      windParticlePositions[i*3+2] = (Math.random() - 0.5) * 40;
+    }
+    const windParticleGeo = new THREE.BufferGeometry();
+    windParticleGeo.setAttribute('position', new THREE.BufferAttribute(windParticlePositions, 3));
+    const windParticleMat = new THREE.PointsMaterial({ color: 0xaaddff, size: 0.08, transparent: true, opacity: 0.28, depthWrite: false });
+    const windParticles = new THREE.Points(windParticleGeo, windParticleMat);
+    scene.add(windParticles);
 
     // --- 3. MODELADO DEL DRON ---
     const droneGroup = new THREE.Group();
@@ -1192,17 +1421,62 @@
     topCap.position.y = 0.025;
     droneGroup.add(topCap);
 
-    [[0.11,0.01,0.11],[-0.11,0.01,0.11],[0.11,0.01,-0.11],[-0.11,0.01,-0.11]].forEach(([x,y,z]) => {
-      const g = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.005, 8, 20), bodyMat);
-      g.rotation.x = Math.PI / 2;
+    // ── A2. Nose marker: front arms are red, rear arms are grey ──
+    // Arms positions: front (+Z neg = forward) are z = -0.11; rear z = +0.11
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0xff1744 });
+    const armPositions = [[0.11,0.01,-0.11],[-0.11,0.01,-0.11],[0.11,0.01,0.11],[-0.11,0.01,0.11]];
+    // front pair (z = -0.11): red guards; rear pair (z = +0.11): dark
+    const armGuardMats = [noseMat, noseMat, bodyMat, bodyMat];
+    // arm beams (thin box extending from center to motor)
+    const frontArmMat = new THREE.MeshStandardMaterial({ color: 0xff1744 });
+    const rearArmMat  = new THREE.MeshStandardMaterial({ color: 0x424242 });
+    [
+      { x:  0.055, z: -0.055, mat: frontArmMat, rx: 0, ry:  Math.PI/4 },
+      { x: -0.055, z: -0.055, mat: frontArmMat, rx: 0, ry: -Math.PI/4 },
+      { x:  0.055, z:  0.055, mat: rearArmMat,  rx: 0, ry: -Math.PI/4 },
+      { x: -0.055, z:  0.055, mat: rearArmMat,  rx: 0, ry:  Math.PI/4 },
+    ].forEach(({ x, z, mat, ry }) => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.008, 0.014), mat);
+      arm.position.set(x, 0.01, z);
+      arm.rotation.y = ry;
+      droneGroup.add(arm);
+    });
+
+    // ── C1. Spinning propeller discs (replace torus rings) ──
+    const propPositions = [[0.11,0.02,0.11],[-0.11,0.02,0.11],[0.11,0.02,-0.11],[-0.11,0.02,-0.11]];
+    const propMat = new THREE.MeshBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.78, side: THREE.DoubleSide });
+    const propGroups = propPositions.map(([x, y, z]) => {
+      const g = new THREE.Group();
+      // disc
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.055, 12), propMat);
+      disc.rotation.x = Math.PI / 2;
+      g.add(disc);
+      // blade cross lines (thin boxes)
+      [-1, 1].forEach(sign => {
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.005, 0.016),
+          new THREE.MeshBasicMaterial({ color: 0x555555 }));
+        blade.rotation.y = sign * Math.PI / 4;
+        g.add(blade);
+      });
       g.position.set(x, y, z);
       droneGroup.add(g);
+      return g;
     });
+
+    // ── C2. Motor startup point lights ──
+    const motorLights = propPositions.map(([x, y, z]) => {
+      const light = new THREE.PointLight(0xffffff, 0, 0.35);
+      light.position.set(x, y + 0.02, z);
+      droneGroup.add(light);
+      return light;
+    });
+    let motorStartupTimer = 0; // counts up from 0 during TAKING_OFF
 
     droneGroup.position.set(0, 0.02, 0);
     scene.add(droneGroup);
 
-    // --- 4. ESTADO DE VUELO ---
+    // Crash tumble angular velocities (set on crash)
+    const crashAngVel = { x: 0, y: 0, z: 0 };
     const FlightState = {
       LANDED:    'EN TIERRA',
       TAKING_OFF:'DESPEGANDO...',
@@ -1732,7 +2006,6 @@
 
           if (drone.vel.length() > 2.0) {
             setFlightState(FlightState.CRASHED);
-            drone.vel.set((Math.random()-0.5)*1.5, -1.2, (Math.random()-0.5)*1.5);
             return;
           } else {
             const vDotN = drone.vel.dot(normal);
@@ -1751,8 +2024,13 @@
       if (drone.state === FlightState.CRASHED) {
         drone.vel.y -= 9.8 * dt;
         drone.pos.addScaledVector(drone.vel, dt);
-        drone.pitch += 6.0 * dt;
-        drone.roll  += 4.0 * dt;
+        // ── C3. Apply tumble angular velocity, damp over time ──
+        drone.pitch += crashAngVel.x * dt;
+        drone.yaw   += crashAngVel.y * dt;
+        drone.roll  += crashAngVel.z * dt;
+        crashAngVel.x *= Math.max(0, 1 - 2.5 * dt);
+        crashAngVel.y *= Math.max(0, 1 - 2.5 * dt);
+        crashAngVel.z *= Math.max(0, 1 - 2.5 * dt);
 
         if (drone.pos.y <= 0.02) {
           drone.pos.y = 0.02;
@@ -1760,8 +2038,21 @@
         }
         droneGroup.position.copy(drone.pos);
         droneGroup.rotation.set(drone.pitch, drone.yaw, drone.roll);
-        updateVisualAids();
+        updateVisualAids(dt, elapsedTime);
         return;
+      }
+
+      // ── C2. Motor startup light ramp ──
+      if (drone.state === FlightState.TAKING_OFF) {
+        motorStartupTimer += dt;
+        const ramp = Math.min(motorStartupTimer / 0.4, 1.0);
+        motorLights.forEach(l => { l.intensity = ramp * 0.6; });
+      } else if (drone.state === FlightState.FLYING) {
+        motorStartupTimer = 0;
+        motorLights.forEach(l => { l.intensity = 0; });
+      } else {
+        motorStartupTimer = 0;
+        motorLights.forEach(l => { l.intensity = 0; });
       }
 
       // Suavizado de sticks
@@ -1901,7 +2192,7 @@
       droneGroup.rotateX(drone.pitch);
       droneGroup.rotateZ(drone.roll);
 
-      updateVisualAids();
+      updateVisualAids(dt, elapsedTime);
 
       // Cámara
       if (isFPVMode) {
@@ -1919,12 +2210,17 @@
       }
     }
 
-    function updateVisualAids() {
+    function updateVisualAids(dt, elapsedTime) {
       const alt = Math.max(drone.pos.y, 0.02);
+      const speedH = Math.hypot(drone.vel.x, drone.vel.z);
 
+      // ── B4. Shadow disc – stretch in velocity direction ──
       shadowDisc.position.set(drone.pos.x, 0.015, drone.pos.z);
-      const scale = 1.0 + alt * 0.45;
-      shadowDisc.scale.set(scale, scale, 1);
+      const baseScale = 1.0 + alt * 0.45;
+      const stretchFactor = 1.0 + speedH * 0.18;
+      const velAngle = Math.atan2(drone.vel.x, drone.vel.z);
+      shadowDisc.rotation.set(-Math.PI / 2, 0, velAngle);
+      shadowDisc.scale.set(baseScale * stretchFactor, baseScale, 1);
       shadowMat.opacity = Math.max(0.15, 0.7 - alt * 0.2);
 
       if (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF) {
@@ -1936,8 +2232,87 @@
         vpsBeam.visible = false;
       }
 
-      headingArrow.position.set(drone.pos.x, 0.02, drone.pos.z);
+      // ── A1. Heading arrow: red, scales with altitude for readability ──
+      const arrowAltScale = 0.8 + alt * 0.4;
+      headingArrow.position.set(drone.pos.x, 0.022, drone.pos.z);
       headingArrow.rotation.set(0, drone.yaw, 0);
+      headingArrow.scale.setScalar(arrowAltScale);
+      headingArrowMat.opacity = Math.max(0.35, Math.min(0.9, 0.9 - alt * 0.08));
+
+      // ── A3. Yaw ghost trail arc ──
+      const isYawing = Math.abs(drone.yawRate) > 0.05;
+      if (isYawing) {
+        yawArcAlpha = Math.min(1, yawArcAlpha + dt * 4);
+        // keep start angle anchored while yawing, update with rate
+        yawArcStartAngle = drone.yaw - Math.sign(drone.yawRate) * Math.abs(drone.yawRate) * 0.6;
+      } else {
+        yawArcAlpha = Math.max(0, yawArcAlpha - dt * 3);
+      }
+      yawArcMat.opacity = yawArcAlpha * 0.55;
+      const arcRadius = 0.5 * arrowAltScale;
+      const arcSpan   = Math.sign(drone.yawRate || 1) * Math.min(Math.abs(drone.yawRate) * 0.5, Math.PI * 0.6);
+      for (let i = 0; i < YAW_ARC_SEGS; i++) {
+        const t = i / (YAW_ARC_SEGS - 1);
+        const a = yawArcStartAngle + arcSpan * t;
+        yawArcPositions[i*3+0] = drone.pos.x + Math.sin(a) * arcRadius;
+        yawArcPositions[i*3+1] = 0;
+        yawArcPositions[i*3+2] = drone.pos.z + Math.cos(a) * arcRadius;
+      }
+      yawArcGeo.attributes.position.needsUpdate = true;
+
+      // ── B1. Motion trail ──
+      if (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF) {
+        trailHistory.unshift({ x: drone.pos.x, y: drone.pos.y, z: drone.pos.z });
+        if (trailHistory.length > TRAIL_LEN) trailHistory.length = TRAIL_LEN;
+      } else if (trailHistory.length > 0) {
+        trailHistory.pop();
+      }
+      const pts = trailHistory.length;
+      for (let i = 0; i < pts; i++) {
+        trailPositions[i*3+0] = trailHistory[i].x;
+        trailPositions[i*3+1] = trailHistory[i].y;
+        trailPositions[i*3+2] = trailHistory[i].z;
+      }
+      trailGeo.attributes.position.needsUpdate = true;
+      trailGeo.setDrawRange(0, Math.max(2, pts));
+      trailMat.opacity = Math.min(0.45, speedH * 0.12);
+
+      // ── C1. Spin propellers ──
+      const isAirborne = drone.state !== FlightState.LANDED;
+      const propSpeed  = isAirborne ? (20 + Math.abs(filteredInput.throttle) * 40) : 0;
+      propGroups.forEach((pg, i) => {
+        pg.rotation.y += propSpeed * (i % 2 === 0 ? 1 : -1) * dt;
+      });
+
+      // ── D2. Altitude ring ──
+      altRing.position.set(drone.pos.x, drone.pos.y, drone.pos.z);
+      const ringRadius = 0.3 + alt * 0.45;
+      altRing.scale.setScalar(ringRadius / 0.5);
+      altRingMat.opacity = Math.max(0.1, 0.45 - alt * 0.04);
+      altRing.visible = (drone.state !== FlightState.LANDED);
+
+      // ── D1. Wind particles – drift in wind direction ──
+      if (DIFFICULTY.windOn && elapsedTime !== undefined) {
+        const wLen = windVector.length();
+        const wDir = wLen > 0.001 ? windVector.clone().divideScalar(wLen) : new THREE.Vector3(1, 0, 0);
+        const pArr = windParticleGeo.attributes.position.array;
+        for (let i = 0; i < WIND_PARTICLE_COUNT; i++) {
+          pArr[i*3+0] += wDir.x * wLen * dt * 0.8;
+          pArr[i*3+2] += wDir.z * wLen * dt * 0.8;
+          // Wrap around the drone within a 40m box
+          const px = pArr[i*3+0] - drone.pos.x;
+          const pz = pArr[i*3+2] - drone.pos.z;
+          if (px > 20)  pArr[i*3+0] -= 40;
+          if (px < -20) pArr[i*3+0] += 40;
+          if (pz > 20)  pArr[i*3+2] -= 40;
+          if (pz < -20) pArr[i*3+2] += 40;
+        }
+        windParticleGeo.attributes.position.needsUpdate = true;
+        windParticleMat.opacity = Math.min(0.35, wLen * 0.08);
+        windParticles.visible = wLen > 0.05;
+      } else {
+        windParticles.visible = false;
+      }
     }
 
     // =====================================================================
@@ -2323,6 +2698,11 @@
           setFlightIconSVG(FLIGHT_ICON_CRASH, 'state-crash');
           btnTakeoff.disabled = false;
           timerRunning = false;
+          // ── C3. Init random crash tumble ──
+          crashAngVel.x = (Math.random() - 0.5) * 18;
+          crashAngVel.y = (Math.random() - 0.5) * 10;
+          crashAngVel.z = (Math.random() - 0.5) * 22;
+          drone.vel.set((Math.random()-0.5)*2.0, 0.5, (Math.random()-0.5)*2.0);
           break;
       }
     }
@@ -2630,7 +3010,182 @@
     new VirtualJoystick('right-zone', 'right-knob', (x,y) => { rawInput.roll=x; rawInput.pitch=-y; });
 
     // =====================================================================
-    // --- 12. BUCLE DE ANIMACIÓN ---
+    // --- 12. HUD 2D – Canvas / DOM update functions ---
+    // =====================================================================
+
+    const horizCtx   = document.getElementById('horizon-canvas').getContext('2d');
+    const compassCtx = document.getElementById('compass-canvas').getContext('2d');
+    const driftCtx   = document.getElementById('wind-drift-canvas').getContext('2d');
+
+    // ── E1. Speed tape ──
+    function updateSpeedTape(speedH) {
+      const maxSpd = CONFIG.MAX_SPEED;
+      const pct    = Math.min(speedH / maxSpd, 1.0) * 100;
+      const fill   = document.getElementById('speed-tape-fill');
+      const val    = document.getElementById('speed-tape-val');
+      if (!fill || !val) return;
+      fill.style.height     = pct + '%';
+      fill.style.background = speedH < maxSpd * 0.5 ? '#4caf50' : speedH < maxSpd * 0.8 ? '#ff9800' : '#e53935';
+      val.textContent       = speedH.toFixed(1);
+    }
+
+    // ── E2. Compass rose ──
+    function updateCompass(yawRad) {
+      const w = 80, h = 44, cx = 40, cy = 26, r = 20;
+      compassCtx.clearRect(0, 0, w, h);
+      // Arc background
+      compassCtx.beginPath();
+      compassCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      compassCtx.strokeStyle = 'rgba(255,255,255,0.18)';
+      compassCtx.lineWidth = 1.5;
+      compassCtx.stroke();
+
+      // Cardinal direction markers
+      const cards = [['N', 0], ['E', Math.PI/2], ['S', Math.PI], ['O', -Math.PI/2]];
+      cards.forEach(([label, angle]) => {
+        // Relative to drone yaw: drone yaw=0 → drone faces −Z (north in scene).
+        // Screen compass: angle from drone yaw = scene_angle − drone_yaw
+        const rel = angle - yawRad;
+        const sx  = cx + Math.sin(rel) * r;
+        const sy  = cy - Math.cos(rel) * r;
+        compassCtx.fillStyle = label === 'N' ? '#ff1744' : 'rgba(255,255,255,0.65)';
+        compassCtx.font = 'bold 9px Arial';
+        compassCtx.textAlign = 'center';
+        compassCtx.textBaseline = 'middle';
+        compassCtx.fillText(label, sx, sy);
+      });
+
+      // Forward triangle marker at top
+      compassCtx.beginPath();
+      compassCtx.moveTo(cx, cy - r - 5);
+      compassCtx.lineTo(cx - 4, cy - r + 1);
+      compassCtx.lineTo(cx + 4, cy - r + 1);
+      compassCtx.closePath();
+      compassCtx.fillStyle = '#fff';
+      compassCtx.fill();
+
+      // Heading text
+      const deg = (((yawRad * 180 / Math.PI) % 360) + 360) % 360;
+      compassCtx.fillStyle = 'rgba(255,255,255,0.8)';
+      compassCtx.font = 'bold 8px Arial';
+      compassCtx.textAlign = 'center';
+      compassCtx.textBaseline = 'middle';
+      compassCtx.fillText(Math.round(deg) + '°', cx, 10);
+    }
+
+    // ── B3. Artificial horizon ──
+    function updateHorizon(pitch, roll) {
+      const w = 100, h = 50, cx = 50, cy = 25;
+      horizCtx.clearRect(0, 0, w, h);
+
+      // Background: semi-transparent
+      horizCtx.save();
+      horizCtx.translate(cx, cy);
+      horizCtx.rotate(roll);
+
+      // Sky half
+      horizCtx.fillStyle = 'rgba(30,120,200,0.45)';
+      horizCtx.fillRect(-w, -h, w * 2, h);
+      // Ground half offset by pitch
+      const pitchOffset = pitch * 180; // pixels per radian
+      horizCtx.fillStyle = 'rgba(80,50,20,0.45)';
+      horizCtx.fillRect(-w, pitchOffset, w * 2, h);
+
+      // Horizon line
+      horizCtx.strokeStyle = 'rgba(255,255,255,0.7)';
+      horizCtx.lineWidth = 1.5;
+      horizCtx.beginPath();
+      horizCtx.moveTo(-w, pitchOffset);
+      horizCtx.lineTo(w,  pitchOffset);
+      horizCtx.stroke();
+
+      horizCtx.restore();
+
+      // Fixed aircraft marker (centre cross)
+      horizCtx.strokeStyle = '#fff';
+      horizCtx.lineWidth   = 1.5;
+      horizCtx.beginPath();
+      horizCtx.moveTo(cx - 14, cy); horizCtx.lineTo(cx - 4, cy);
+      horizCtx.moveTo(cx + 4,  cy); horizCtx.lineTo(cx + 14, cy);
+      horizCtx.moveTo(cx, cy - 4);  horizCtx.lineTo(cx, cy + 4);
+      horizCtx.stroke();
+
+      // Border
+      horizCtx.strokeStyle = 'rgba(255,255,255,0.18)';
+      horizCtx.lineWidth   = 1;
+      horizCtx.strokeRect(0.5, 0.5, w - 1, h - 1);
+    }
+
+    // ── B2. Wind drift indicator ──
+    function updateDriftIndicator(inVPS) {
+      const el = document.getElementById('wind-drift-hud');
+      if (!inVPS) { el.classList.remove('active'); return; }
+      el.classList.add('active');
+
+      const s = 44, cx = 22, cy = 22, r = 16;
+      driftCtx.clearRect(0, 0, s, s);
+
+      const wLen = windVector.length();
+      if (wLen < 0.01) return;
+      const wDir = windVector.clone().divideScalar(wLen);
+      const ang  = Math.atan2(wDir.x, wDir.z); // angle from south
+      const mag  = Math.min(wLen / 4, 1.0);
+
+      // Circle background
+      driftCtx.beginPath();
+      driftCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      driftCtx.strokeStyle = 'rgba(229,57,53,0.5)';
+      driftCtx.lineWidth   = 1.5;
+      driftCtx.stroke();
+
+      // Arrow
+      const ax = cx + Math.sin(ang) * r * mag;
+      const ay = cy - Math.cos(ang) * r * mag;
+      driftCtx.beginPath();
+      driftCtx.moveTo(cx, cy);
+      driftCtx.lineTo(ax, ay);
+      driftCtx.strokeStyle = '#ff5252';
+      driftCtx.lineWidth   = 2.5;
+      driftCtx.lineCap     = 'round';
+      driftCtx.stroke();
+
+      // Arrowhead
+      const headAng = Math.atan2(ay - cy, ax - cx);
+      driftCtx.beginPath();
+      driftCtx.moveTo(ax, ay);
+      driftCtx.lineTo(ax - 6 * Math.cos(headAng - 0.4), ay - 6 * Math.sin(headAng - 0.4));
+      driftCtx.lineTo(ax - 6 * Math.cos(headAng + 0.4), ay - 6 * Math.sin(headAng + 0.4));
+      driftCtx.closePath();
+      driftCtx.fillStyle = '#ff5252';
+      driftCtx.fill();
+    }
+
+    // ── E3. Input visualizer ──
+    const inputDotLeft  = document.getElementById('input-dot-left');
+    const inputDotRight = document.getElementById('input-dot-right');
+    const INPUT_VIZ_BOX = 36; // px, size of box
+
+    function updateInputViz() {
+      if (!inputDotLeft || !inputDotRight) return;
+      const half = INPUT_VIZ_BOX / 2;
+      // Left stick: yaw (X) + throttle (−Y)
+      const lx = half + filteredInput.yaw      * (half - 5);
+      const ly = half - filteredInput.throttle * (half - 5);
+      inputDotLeft.style.left = lx + 'px';
+      inputDotLeft.style.top  = ly + 'px';
+      // Right stick: roll (X) + pitch (−Y)
+      const rx = half + filteredInput.roll  * (half - 5);
+      const ry = half + filteredInput.pitch * (half - 5);
+      inputDotRight.style.left = rx + 'px';
+      inputDotRight.style.top  = ry + 'px';
+    }
+
+    // ── D3. VPS vignette (also pulses slick zone materials) ──
+    const vpsVignette = document.getElementById('vps-vignette');
+    // Slick zone material pulsing is handled below by storing refs
+
+    // =====================================================================
+    // --- 13. BUCLE DE ANIMACIÓN ---
     // =====================================================================
     const clock = new THREE.Clock();
 
@@ -2647,7 +3202,6 @@
         if (batteryTimeLeft <= 0 && !batteryDepleted) {
           batteryDepleted = true;
           batteryTimeLeft = 0;
-          // Force emergency landing
           setFlightState(FlightState.LANDING);
         }
       }
@@ -2661,7 +3215,6 @@
       }
       renderer.render(scene, camera);
 
-      // Update top-bar speed/alt readout
       const speed  = Math.hypot(drone.vel.x, drone.vel.z);
       const statusSpeed = document.getElementById('status-speed');
       const statusAlt   = document.getElementById('status-alt');
@@ -2669,9 +3222,33 @@
       if (statusAlt)   statusAlt.textContent   = `H ${drone.pos.y.toFixed(1)}m`;
 
       // FPV propeller animation: pause when landed
-      const propBlades = fpvOverlay.querySelectorAll('.fpv-prop-blade');
-      const isAirborne = drone.state !== FlightState.LANDED;
+      const propBlades  = fpvOverlay.querySelectorAll('.fpv-prop-blade');
+      const isAirborne  = drone.state !== FlightState.LANDED;
       propBlades.forEach(b => { b.style.animationPlayState = isAirborne ? 'running' : 'paused'; });
+
+      // ── Update all HUD elements ──
+      updateSpeedTape(speed);
+      updateCompass(drone.yaw);
+      updateHorizon(drone.pitch, drone.roll);
+      updateDriftIndicator(!drone.vpsActive);
+      updateInputViz();
+
+      // ── D3. VPS vignette + slick zone material pulse ──
+      if (!drone.vpsActive) {
+        vpsVignette.classList.add('active');
+        // Pulse slick zone materials
+        const pulse = 0.5 + 0.5 * Math.sin(elapsedTime * 8);
+        levelSlickZones.forEach(sz => {
+          if (sz.mesh && sz.mesh.material) {
+            sz.mesh.material.opacity = 0.55 + pulse * 0.35;
+          }
+        });
+      } else {
+        vpsVignette.classList.remove('active');
+        levelSlickZones.forEach(sz => {
+          if (sz.mesh && sz.mesh.material) sz.mesh.material.opacity = 0.8;
+        });
+      }
     }
 
     window.addEventListener('resize', () => {
