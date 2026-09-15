@@ -252,7 +252,6 @@
       left: 50%;
       transform: translateX(-50%);
       pointer-events: auto;
-      display: none;
       flex-direction: row;
       gap: 8px;
       align-items: center;
@@ -1014,8 +1013,11 @@
       drone.vpsActive = !inSlick;
       vpsWarningEl.style.display = inSlick ? 'block' : 'none';
 
-      // Ráfaga periódica de viento (más intensa en niveles avanzados)
-      const gustAmp = LEVEL_DEFS[currentLevel].windScale * 0.12;
+      // Ráfaga periódica de viento (más intensa en niveles avanzados o según preset freestyle)
+      const activeWindScale = isFreestyleMode
+        ? FREESTYLE_WIND_PRESETS[fsWindPreset].scale
+        : LEVEL_DEFS[currentLevel].windScale;
+      const gustAmp = activeWindScale * 0.12;
       const gust = Math.sin(elapsedTime * 1.5) * gustAmp;
       const currentWind = windVector.clone().multiplyScalar(1.0 + gust);
 
@@ -1524,7 +1526,7 @@
     });
 
     // =====================================================================
-    // --- 10. JOYSTICKS MULTITÁCTILES ---
+    // --- 11. JOYSTICKS MULTITÁCTILES ---
     // =====================================================================
     class VirtualJoystick {
       constructor(zoneId, knobId, onMove) {
