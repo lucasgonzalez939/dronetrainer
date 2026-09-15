@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Simulador Tello EDU - Academia de Vuelo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      touch-action: none;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    #ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .hud-box {
+      position: absolute;
+      color: #00ffcc;
+      background: rgba(10, 20, 30, 0.85);
+      border: 1px solid rgba(0, 255, 204, 0.3);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.4;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    #telemetry { top: 15px; left: 15px; }
+    #mission-hud {
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      min-width: 320px;
+    }
+    .mission-title {
+      color: #ffca28;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 3px;
+    }
+    #vps-warning {
+      color: #ff3d00;
+      font-weight: bold;
+      display: none;
+      margin-top: 4px;
+      animation: blink 0.8s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+    .btn-flight {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      pointer-events: auto;
+      background: #ff5722;
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .btn-flight:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    /* Joysticks Táctiles */
+    .joystick-zone {
+      position: absolute;
+      bottom: 25px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      pointer-events: auto;
+    }
+    .deadzone-guide {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 1px dashed rgba(255, 255, 255, 0.25);
+      pointer-events: none;
+    }
+    .stick-label {
+      position: absolute;
+      top: -22px;
+      width: 100%;
+      text-align: center;
+      color: #88a0b0;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+    #left-zone { left: 25px; }
+    #right-zone { right: 25px; }
+    
+    .stick-knob {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: rgba(0, 255, 204, 0.45);
+      border: 2px solid #00ffcc;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: transform 0.05s ease-out;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui-layer">
+    <div class="hud-box" id="telemetry">
+      TELLO: EN ESPERA<br>
+      ALT: 0.00 m | VEL: 0.0 m/s<br>
+      RUMBO: 0° | VIENTO: 0.4 m/s
+    </div>
+
+    <div class="hud-box" id="mission-hud">
+      <div class="mission-title" id="mission-title">MISIÓN 1 / 3</div>
+      <div id="mission-desc">Despega y atraviesa lentamente el Aro 1</div>
+      <div id="vps-warning">⚠ ALERTA: VPS CIEGO (DERIVA ACTIVA) ⚠</div>
+      <div id="mission-timer" style="color:#aaa; font-size:11px; margin-top:3px;">TIEMPO: 00:00.0</div>
+    </div>
+
+    <button class="btn-flight" id="btn-flight">DESPEGAR</button>
+
+    <div class="joystick-zone" id="left-zone">
+      <div class="stick-label">ALTURA / GIRO (YAW)</div>
+      <div class="deadzone-guide"></div>
+      <div class="stick-knob" id="left-knob"></div>
+    </div>
+    <div class="joystick-zone" id="right-zone">
+      <div class="stick-label">INCLINACIÓN (AVANCE / LATERAL)</div>
+      <div class="deadzone-guide"></div>
+      <div class="stick-knob" id="right-knob"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. CONFIGURACIÓN THREE.JS ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // Domo de cielo procedural (Horizonte despejado)
+    const vertexShader = `
+      varying vec3 vWorldPosition;
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+      }
+    `;
+    const fragmentShader = `
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      uniform vec3 groundHorizonColor;
+      uniform float exponent;
+      varying vec3 vWorldPosition;
+      void main() {
+        float h = normalize(vWorldPosition).y;
+        if (h >= 0.0) {
+          gl_FragColor = vec4(mix(groundHorizonColor, topColor, max(pow(h, exponent), 0.0)), 1.0);
+        } else {
+          gl_FragColor = vec4(mix(groundHorizonColor, bottomColor, max(pow(-h, exponent), 0.0)), 1.0);
+        }
+      }
+    `;
+    const skyMat = new THREE.ShaderMaterial({
+      vertexShader,
+      fragmentShader,
+      uniforms: {
+        topColor: { value: new THREE.Color(0x1976d2) },
+        groundHorizonColor: { value: new THREE.Color(0xcce0ff) },
+        bottomColor: { value: new THREE.Color(0x2d3a2e) },
+        exponent: { value: 0.5 }
+      },
+      side: THREE.BackSide
+    });
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), skyMat));
+
+    // Luces
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 0.7));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.85);
+    sun.position.set(40, 60, 30);
+    sun.castShadow = true;
+    sun.shadow.mapSize.width = 2048;
+    sun.shadow.mapSize.height = 2048;
+    scene.add(sun);
+
+    // Suelo
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(600, 600),
+      new THREE.MeshLambertMaterial({ color: 0x243326 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const grid = new THREE.GridHelper(60, 60, 0x00ffcc, 0x37474f);
+    grid.position.y = 0.01;
+    scene.add(grid);
+
+    // Helipuerto de inicio
+    const startPad = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.8, 0.8, 0.02, 32),
+      new THREE.MeshStandardMaterial({ color: 0x00bcd4, roughness: 0.4 })
+    );
+    startPad.position.set(0, 0.01, 0);
+    scene.add(startPad);
+
+    // --- 2. AYUDAS VISUALES ESPACIALES PARA ALUMNOS ---
+    // A) Sombra proyectada vertical sintética (Shadow Blob)
+    const shadowMat = new THREE.MeshBasicMaterial({
+      color: 0x050d0a,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false
+    });
+    const shadowDisc = new THREE.Mesh(new THREE.CircleGeometry(0.35, 32), shadowMat);
+    shadowDisc.rotation.x = -Math.PI / 2;
+    shadowDisc.position.y = 0.015;
+    scene.add(shadowDisc);
+
+    // B) Haz visual del sensor de flujo óptico inferior (ToF / VPS Cone)
+    const vpsBeamGeo = new THREE.CylinderGeometry(0.02, 0.25, 1.0, 16, 1, true);
+    const vpsBeamMat = new THREE.MeshBasicMaterial({
+      color: 0x00e5ff,
+      transparent: true,
+      opacity: 0.15,
+      wireframe: true,
+      depthWrite: false
+    });
+    const vpsBeam = new THREE.Mesh(vpsBeamGeo, vpsBeamMat);
+    scene.add(vpsBeam);
+
+    // C) Flecha guía de rumbo en el suelo (Orientación de vuelo)
+    const headingArrowGeo = new THREE.ConeGeometry(0.1, 0.3, 8);
+    headingArrowGeo.rotateX(Math.PI / 2);
+    const headingArrowMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.5 });
+    const headingArrow = new THREE.Mesh(headingArrowGeo, headingArrowMat);
+    headingArrow.position.y = 0.02;
+    scene.add(headingArrow);
+
+    // --- 3. ZONA DE PERTURBACIÓN AMBIENTAL (SUPERFICIE COMPLEJA / VPS OFF) ---
+    // Simula agua o una superficie hiper-reflectante donde el VPS se apaga y el dron entra en deriva
+    const slickZoneGeo = new THREE.PlaneGeometry(5, 5);
+    const slickZoneMat = new THREE.MeshStandardMaterial({
+      color: 0x29b6f6,
+      roughness: 0.05,
+      metalness: 0.8,
+      transparent: true,
+      opacity: 0.8
+    });
+    const slickZone = new THREE.Mesh(slickZoneGeo, slickZoneMat);
+    slickZone.rotation.x = -Math.PI / 2;
+    slickZone.position.set(0, 0.018, -6);
+    scene.add(slickZone);
+
+    const slickBounds = { minX: -2.5, maxX: 2.5, minZ: -8.5, maxZ: -3.5 };
+
+    // --- 4. MODELADO DEL DRON ---
+    const droneGroup = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x212121 });
+    const topMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    
+    const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.18), bodyMat);
+    baseMesh.castShadow = true;
+    droneGroup.add(baseMesh);
+
+    const topCap = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.14), topMat);
+    topCap.position.y = 0.025;
+    droneGroup.add(topCap);
+
+    [
+      [0.11, 0.01, 0.11], [-0.11, 0.01, 0.11],
+      [0.11, 0.01, -0.11], [-0.11, 0.01, -0.11]
+    ].forEach(([x, y, z]) => {
+      const g = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.005, 8, 20), bodyMat);
+      g.rotation.x = Math.PI / 2;
+      g.position.set(x, y, z);
+      droneGroup.add(g);
+    });
+
+    droneGroup.position.set(0, 0.02, 0);
+    scene.add(droneGroup);
+
+    // --- 5. OBSTÁCULOS Y AROS DE MISIÓN ---
+    const obstacles = [];
+
+    function createFlightGate(x, y, z, rotY = 0) {
+      const gateGroup = new THREE.Group();
+      const ringMat = new THREE.MeshStandardMaterial({ color: 0xff9800, roughness: 0.3, emissive: 0x331e00 });
+      const size = 1.4;
+      const thick = 0.12;
+
+      const topSeg = new THREE.Mesh(new THREE.BoxGeometry(size + thick * 2, thick, thick), ringMat);
+      topSeg.position.set(0, size / 2 + thick / 2, 0);
+      const btmSeg = new THREE.Mesh(new THREE.BoxGeometry(size + thick * 2, thick, thick), ringMat);
+      btmSeg.position.set(0, -size / 2 - thick / 2, 0);
+      const lSeg = new THREE.Mesh(new THREE.BoxGeometry(thick, size, thick), ringMat);
+      lSeg.position.set(-size / 2 - thick / 2, 0, 0);
+      const rSeg = new THREE.Mesh(new THREE.BoxGeometry(thick, size, thick), ringMat);
+      rSeg.position.set(size / 2 + thick / 2, 0, 0);
+
+      const legHeight = y - size / 2 - thick;
+      const legGeo = new THREE.CylinderGeometry(0.04, 0.04, legHeight, 16);
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x37474f });
+      const leftLeg = new THREE.Mesh(legGeo, legMat);
+      leftLeg.position.set(-size / 2 - thick / 2, -size / 2 - thick - legHeight / 2, 0);
+      const rightLeg = new THREE.Mesh(legGeo, legMat);
+      rightLeg.position.set(size / 2 + thick / 2, -size / 2 - thick - legHeight / 2, 0);
+
+      gateGroup.add(topSeg, btmSeg, lSeg, rSeg, leftLeg, rightLeg);
+      gateGroup.position.set(x, y, z);
+      gateGroup.rotation.y = rotY;
+      scene.add(gateGroup);
+
+      [topSeg, btmSeg, lSeg, rSeg, leftLeg, rightLeg].forEach(part => {
+        part.updateWorldMatrix(true, false);
+        obstacles.push({ box: new THREE.Box3().setFromObject(part), mesh: part });
+      });
+
+      return {
+        center: new THREE.Vector3(x, y, z),
+        radius: size / 2,
+        setSuccess: () => {
+          ringMat.color.setHex(0x00ffcc);
+          ringMat.emissive.setHex(0x003322);
+        }
+      };
+    }
+
+    const gate1 = createFlightGate(0, 1.2, -3.5, 0);
+    const gate2 = createFlightGate(3.2, 1.4, -8.5, Math.PI / 4);
+
+    const landingPad = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 0.9, 0.02, 32),
+      new THREE.MeshStandardMaterial({ color: 0xffeb3b, roughness: 0.3 })
+    );
+    landingPad.position.set(0, 0.01, -12);
+    scene.add(landingPad);
+
+    // --- 6. DINÁMICA DE VUELO CON VIENTO Y PERTURBACIÓN ---
+    const FlightState = {
+      LANDED: 'EN TIERRA',
+      TAKING_OFF: 'DESPEGANDO...',
+      FLYING: 'EN VUELO',
+      LANDING: 'ATERRIZANDO...',
+      CRASHED: 'COLISIÓN'
+    };
+
+    const drone = {
+      state: FlightState.LANDED,
+      pos: new THREE.Vector3(0, 0.02, 0),
+      vel: new THREE.Vector3(0, 0, 0),
+      radius: 0.16,
+      yaw: 0,
+      yawRate: 0,
+      pitch: 0,
+      roll: 0,
+      targetHoverAlt: 1.0,
+      vpsActive: true
+    };
+
+    const rawInput = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+    const filteredInput = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+
+    const CONFIG = {
+      MAX_SPEED: 2.6,
+      MAX_VERT_SPEED: 1.0,
+      TAKEOFF_SPEED: 0.6,
+      LANDING_SPEED: 0.4,
+      MAX_YAW_RATE: 1.8,
+      INPUT_FILTER: 6.0,
+      ACCEL_DAMP: 3.5,
+      NORMAL_DRAG: 2.5,
+      VPS_FAIL_DRAG: 0.25, // Si falla el VPS, casi no hay freno automático
+      TILT_FACTOR: 0.12
+    };
+
+    // Vector de viento ambiental sutil
+    const windVector = new THREE.Vector3(0.35, 0, 0.15);
+
+    function checkAndResolveCollisions() {
+      if (drone.state === FlightState.LANDED) return;
+      const closestPoint = new THREE.Vector3();
+
+      for (let i = 0; i < obstacles.length; i++) {
+        const obs = obstacles[i];
+        obs.box.clampPoint(drone.pos, closestPoint);
+        const distSq = drone.pos.distanceToSquared(closestPoint);
+
+        if (distSq < (drone.radius * drone.radius)) {
+          const normal = new THREE.Vector3().subVectors(drone.pos, closestPoint);
+          const dist = Math.sqrt(distSq);
+          normal.divideScalar(dist > 0.0001 ? dist : 1.0);
+
+          drone.pos.addScaledVector(normal, drone.radius - dist);
+
+          if (drone.vel.length() > 2.0) {
+            setFlightState(FlightState.CRASHED);
+            drone.vel.set((Math.random() - 0.5) * 1.5, -1.2, (Math.random() - 0.5) * 1.5);
+            return;
+          } else {
+            const vDotN = drone.vel.dot(normal);
+            if (vDotN < 0) {
+              drone.vel.subScaledVector(normal, 1.3 * vDotN);
+              drone.vel.multiplyScalar(0.6);
+            }
+          }
+        }
+      }
+    }
+
+    const vpsWarningEl = document.getElementById('vps-warning');
+
+    function updateFlightPhysics(dt, elapsedTime) {
+      if (drone.state === FlightState.CRASHED) {
+        drone.vel.y -= 9.8 * dt;
+        drone.pos.addScaledVector(drone.vel, dt);
+        drone.pitch += 6.0 * dt;
+        drone.roll += 4.0 * dt;
+
+        if (drone.pos.y <= 0.02) {
+          drone.pos.y = 0.02;
+          drone.vel.set(0, 0, 0);
+        }
+        droneGroup.position.copy(drone.pos);
+        droneGroup.rotation.set(drone.pitch, drone.yaw, drone.roll);
+        updateVisualAids();
+        return;
+      }
+
+      // Suavizado de sticks
+      const filterFactor = 1.0 - Math.exp(-CONFIG.INPUT_FILTER * dt);
+      filteredInput.throttle += (rawInput.throttle - filteredInput.throttle) * filterFactor;
+      filteredInput.yaw += (rawInput.yaw - filteredInput.yaw) * filterFactor;
+      filteredInput.pitch += (rawInput.pitch - filteredInput.pitch) * filterFactor;
+      filteredInput.roll += (rawInput.roll - filteredInput.roll) * filterFactor;
+
+      // Verificación de zona de falla de VPS
+      const inSlick = (drone.pos.x >= slickBounds.minX && drone.pos.x <= slickBounds.maxX &&
+                       drone.pos.z >= slickBounds.minZ && drone.pos.z <= slickBounds.maxZ &&
+                       drone.pos.y <= 2.5);
+
+      drone.vpsActive = !inSlick;
+      vpsWarningEl.style.display = inSlick ? 'block' : 'none';
+
+      // Ráfaga periódica de viento
+      const gust = Math.sin(elapsedTime * 1.5) * 0.2;
+      const currentWind = windVector.clone().multiplyScalar(1.0 + gust);
+
+      switch (drone.state) {
+        case FlightState.LANDED:
+          drone.pos.y = 0.02;
+          drone.vel.set(0, 0, 0);
+          drone.pitch = 0;
+          drone.roll = 0;
+          break;
+
+        case FlightState.TAKING_OFF:
+          drone.vel.set(0, CONFIG.TAKEOFF_SPEED, 0);
+          drone.pos.y += drone.vel.y * dt;
+          if (drone.pos.y >= drone.targetHoverAlt) {
+            drone.pos.y = drone.targetHoverAlt;
+            drone.vel.set(0, 0, 0);
+            setFlightState(FlightState.FLYING);
+          }
+          break;
+
+        case FlightState.LANDING:
+          drone.vel.x *= Math.max(0, 1.0 - CONFIG.NORMAL_DRAG * dt);
+          drone.vel.z *= Math.max(0, 1.0 - CONFIG.NORMAL_DRAG * dt);
+          drone.vel.y = -CONFIG.LANDING_SPEED;
+          drone.pos.addScaledVector(drone.vel, dt);
+
+          if (drone.pos.y <= 0.02) {
+            drone.pos.y = 0.02;
+            drone.vel.set(0, 0, 0);
+            setFlightState(FlightState.LANDED);
+            checkMissionLanding();
+          }
+          break;
+
+        case FlightState.FLYING:
+          drone.yawRate += (-filteredInput.yaw * CONFIG.MAX_YAW_RATE - drone.yawRate) * (CONFIG.ACCEL_DAMP * dt);
+          drone.yaw += drone.yawRate * dt;
+
+          const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+          const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+
+          const targetVx = filteredInput.roll * CONFIG.MAX_SPEED;
+          const targetVz = -filteredInput.pitch * CONFIG.MAX_SPEED;
+          const targetVy = filteredInput.throttle * CONFIG.MAX_VERT_SPEED;
+
+          const targetWorldVel = new THREE.Vector3()
+            .addScaledVector(right, targetVx)
+            .addScaledVector(forward, -targetVz);
+          targetWorldVel.y = targetVy;
+
+          drone.vel.lerp(targetWorldVel, (1.0 - Math.exp(-CONFIG.ACCEL_DAMP * dt)));
+
+          // Efecto de viento y VPS
+          const activeDrag = drone.vpsActive ? CONFIG.NORMAL_DRAG : CONFIG.VPS_FAIL_DRAG;
+
+          if (filteredInput.roll === 0 && filteredInput.pitch === 0) {
+            // Freno automático si hay VPS; si no hay VPS, deriva libre
+            drone.vel.x *= Math.max(0, 1.0 - (activeDrag * dt));
+            drone.vel.z *= Math.max(0, 1.0 - (activeDrag * dt));
+
+            if (!drone.vpsActive) {
+              // El viento arrastra el dron sin corrección automática
+              drone.vel.addScaledVector(currentWind, dt * 1.8);
+            }
+          }
+
+          if (filteredInput.throttle === 0) {
+            drone.vel.y *= Math.max(0, 1.0 - (CONFIG.NORMAL_DRAG * dt));
+          }
+
+          drone.pos.addScaledVector(drone.vel, dt);
+
+          if (drone.pos.y < 0.08) {
+            drone.pos.y = 0.08;
+            drone.vel.y = 0;
+          }
+          break;
+      }
+
+      checkAndResolveCollisions();
+
+      // Pitch / Roll
+      const forwardNorm = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+      const rightNorm = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+      const localVx = drone.vel.dot(rightNorm);
+      const localVz = drone.vel.dot(forwardNorm);
+
+      const targetRoll = -(localVx / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
+      const targetPitch = (localVz / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
+      
+      const tiltLerp = 1.0 - Math.exp(-6.0 * dt);
+      drone.roll += (targetRoll - drone.roll) * tiltLerp;
+      drone.pitch += (targetPitch - drone.pitch) * tiltLerp;
+
+      droneGroup.position.copy(drone.pos);
+      droneGroup.rotation.set(0, 0, 0);
+      droneGroup.rotateY(drone.yaw);
+      droneGroup.rotateX(drone.pitch);
+      droneGroup.rotateZ(drone.roll);
+
+      updateVisualAids();
+
+      // Cámara
+      const lookTarget = drone.pos.clone().add(new THREE.Vector3(0, 0.15, 0));
+      const camOffset = new THREE.Vector3(0, 0.75, 1.8).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+      const targetCamPos = drone.pos.clone().add(camOffset);
+      if (targetCamPos.y < 0.25) targetCamPos.y = 0.25;
+
+      camera.position.lerp(targetCamPos, 0.06);
+      camera.lookAt(lookTarget);
+    }
+
+    // Actualizar proyección de sombras y referencias espaciales
+    function updateVisualAids() {
+      const alt = Math.max(drone.pos.y, 0.02);
+
+      // 1. Sombra en el suelo: se agranda y desvanece con la altura
+      shadowDisc.position.set(drone.pos.x, 0.015, drone.pos.z);
+      const scale = 1.0 + alt * 0.45;
+      shadowDisc.scale.set(scale, scale, 1);
+      shadowMat.opacity = Math.max(0.15, 0.7 - alt * 0.2);
+
+      // 2. Haz VPS: une el dron con el piso
+      if (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF) {
+        vpsBeam.visible = true;
+        vpsBeam.position.set(drone.pos.x, alt / 2, drone.pos.z);
+        vpsBeam.scale.set(1.0, alt, 1.0);
+        vpsBeamMat.color.setHex(drone.vpsActive ? 0x00e5ff : 0xff3d00);
+      } else {
+        vpsBeam.visible = false;
+      }
+
+      // 3. Flecha de rumbo en el suelo
+      headingArrow.position.set(drone.pos.x, 0.02, drone.pos.z);
+      headingArrow.rotation.set(0, drone.yaw, 0);
+    }
+
+    // --- 7. SISTEMA DE MISIONES EN ESPAÑOL ---
+    const missions = [
+      {
+        title: "MISIÓN 1 / 3",
+        desc: "Despega y atraviesa lentamente el Aro 1",
+        check: () => {
+          const d = drone.pos.distanceTo(gate1.center);
+          return (d < gate1.radius && Math.abs(drone.pos.z - gate1.center.z) < 0.4);
+        },
+        onComplete: () => gate1.setSuccess()
+      },
+      {
+        title: "MISIÓN 2 / 3",
+        desc: "Cruza la zona celeste (¡El viento provocará deriva!) hacia el Aro 2",
+        check: () => {
+          const d = drone.pos.distanceTo(gate2.center);
+          return (d < gate2.radius && Math.abs(drone.pos.z - gate2.center.z) < 0.4);
+        },
+        onComplete: () => gate2.setSuccess()
+      },
+      {
+        title: "MISIÓN 3 / 3",
+        desc: "Aterriza con suavidad en el helipuerto amarillo final",
+        check: () => false
+      }
+    ];
+
+    let currentMissionIdx = 0;
+    let missionTimer = 0;
+    let timerRunning = false;
+
+    const missionTitleEl = document.getElementById('mission-title');
+    const missionDescEl = document.getElementById('mission-desc');
+    const missionTimerEl = document.getElementById('mission-timer');
+
+    function updateMissionLogic(dt) {
+      if (timerRunning) {
+        missionTimer += dt;
+        const mins = Math.floor(missionTimer / 60);
+        const secs = (missionTimer % 60).toFixed(1);
+        missionTimerEl.textContent = `TIEMPO: ${mins.toString().padStart(2, '0')}:${secs.padStart(4, '0')}`;
+      }
+
+      if (currentMissionIdx < missions.length) {
+        const m = missions[currentMissionIdx];
+        if (m.check && m.check()) {
+          if (m.onComplete) m.onComplete();
+          currentMissionIdx++;
+          if (currentMissionIdx < missions.length) {
+            missionTitleEl.textContent = missions[currentMissionIdx].title;
+            missionDescEl.textContent = missions[currentMissionIdx].desc;
+          } else {
+            missionTitleEl.textContent = "¡CIRCUITO COMPLETADO!";
+            missionTitleEl.style.color = "#00ffcc";
+            missionDescEl.textContent = "¡Todos los puntos de control aprobados!";
+            timerRunning = false;
+          }
+        }
+      }
+    }
+
+    function checkMissionLanding() {
+      if (currentMissionIdx === 2) {
+        const dist = Math.hypot(drone.pos.x - landingPad.position.x, drone.pos.z - landingPad.position.z);
+        if (dist <= 1.0) {
+          currentMissionIdx++;
+          missionTitleEl.textContent = "¡MISIÓN SUPERADA!";
+          missionTitleEl.style.color = "#00e676";
+          missionDescEl.textContent = "¡Aterrizaje de alta precisión logrado!";
+          timerRunning = false;
+        }
+      }
+    }
+
+    // --- 8. UI Y CONTROL DE ESTADOS ---
+    const btnFlight = document.getElementById('btn-flight');
+
+    function setFlightState(newState) {
+      drone.state = newState;
+      switch (newState) {
+        case FlightState.LANDED:
+          btnFlight.textContent = 'DESPEGAR';
+          btnFlight.style.background = '#ff5722';
+          btnFlight.disabled = false;
+          break;
+        case FlightState.TAKING_OFF:
+          btnFlight.textContent = 'ARMANDO...';
+          btnFlight.style.background = '#ff9800';
+          btnFlight.disabled = true;
+          timerRunning = true;
+          break;
+        case FlightState.FLYING:
+          btnFlight.textContent = 'ATERRIZAR';
+          btnFlight.style.background = '#00c853';
+          btnFlight.disabled = false;
+          break;
+        case FlightState.LANDING:
+          btnFlight.textContent = 'BAJANDO...';
+          btnFlight.style.background = '#ff9800';
+          btnFlight.disabled = true;
+          break;
+        case FlightState.CRASHED:
+          btnFlight.textContent = 'REINICIAR';
+          btnFlight.style.background = '#d50000';
+          btnFlight.disabled = false;
+          timerRunning = false;
+          break;
+      }
+    }
+
+    btnFlight.addEventListener('click', () => {
+      if (drone.state === FlightState.LANDED) {
+        setFlightState(FlightState.TAKING_OFF);
+      } else if (drone.state === FlightState.FLYING) {
+        setFlightState(FlightState.LANDING);
+      } else if (drone.state === FlightState.CRASHED) {
+        drone.pos.set(0, 0.02, 0);
+        drone.vel.set(0, 0, 0);
+        drone.yaw = 0;
+        drone.yawRate = 0;
+        setFlightState(FlightState.LANDED);
+      }
+    });
+
+    // --- 9. JOYSTICKS MULTITÁCTILES CON ZONA MUERTA ---
+    class VirtualJoystick {
+      constructor(zoneId, knobId, onMove) {
+        this.zone = document.getElementById(zoneId);
+        this.knob = document.getElementById(knobId);
+        this.onMove = onMove;
+        this.pointerId = null;
+        this.radius = 70;
+        this.deadzoneRatio = 0.14;
+        this.exponent = 1.8;
+        this.origin = { x: 0, y: 0 };
+        this.bindEvents();
+      }
+
+      bindEvents() {
+        this.zone.addEventListener('pointerdown', (e) => {
+          if (this.pointerId !== null) return;
+          this.pointerId = e.pointerId;
+          this.zone.setPointerCapture(e.pointerId);
+
+          const rect = this.zone.getBoundingClientRect();
+          this.origin = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+          };
+          this.update(this.origin.x, this.origin.y);
+        });
+
+        this.zone.addEventListener('pointermove', (e) => {
+          if (e.pointerId !== this.pointerId) return;
+          this.update(e.clientX, e.clientY);
+        });
+
+        const release = (e) => {
+          if (e.pointerId !== this.pointerId) return;
+          this.pointerId = null;
+          this.knob.style.transform = `translate(-50%, -50%)`;
+          this.onMove(0, 0);
+        };
+
+        this.zone.addEventListener('pointerup', release);
+        this.zone.addEventListener('pointercancel', release);
+      }
+
+      update(clientX, clientY) {
+        let dx = clientX - this.origin.x;
+        let dy = clientY - this.origin.y;
+        const dist = Math.hypot(dx, dy);
+
+        let visualDx = dx;
+        let visualDy = dy;
+        if (dist > this.radius) {
+          visualDx = (dx / dist) * this.radius;
+          visualDy = (dy / dist) * this.radius;
+        }
+
+        this.knob.style.transform = `translate(calc(-50% + ${visualDx}px), calc(-50% + ${visualDy}px))`;
+
+        const normDist = Math.min(dist / this.radius, 1.0);
+        if (normDist < this.deadzoneRatio) {
+          this.onMove(0, 0);
+          return;
+        }
+
+        const effectiveDist = (normDist - this.deadzoneRatio) / (1.0 - this.deadzoneRatio);
+        const shapedMagnitude = Math.pow(effectiveDist, this.exponent);
+
+        const angle = Math.atan2(dy, dx);
+        this.onMove(Math.cos(angle) * shapedMagnitude, Math.sin(angle) * shapedMagnitude);
+      }
+    }
+
+    new VirtualJoystick('left-zone', 'left-knob', (x, y) => {
+      rawInput.yaw = x;
+      rawInput.throttle = -y;
+    });
+
+    new VirtualJoystick('right-zone', 'right-knob', (x, y) => {
+      rawInput.roll = x;
+      rawInput.pitch = -y;
+    });
+
+    // --- 10. BUCLE DE ANIMACIÓN ---
+    const telemetryEl = document.getElementById('telemetry');
+    const clock = new THREE.Clock();
+
+    function loop() {
+      requestAnimationFrame(loop);
+      const dt = Math.min(clock.getDelta(), 0.1);
+      const elapsedTime = clock.getElapsedTime();
+
+      updateFlightPhysics(dt, elapsedTime);
+      updateMissionLogic(dt);
+      renderer.render(scene, camera);
+
+      const speed = Math.hypot(drone.vel.x, drone.vel.z).toFixed(2);
+      const yawDeg = Math.round(((-drone.yaw * 180 / Math.PI) % 360 + 360) % 360);
+      telemetryEl.innerHTML = `
+        TELLO: ${drone.state}<br>
+        ALT: ${drone.pos.y.toFixed(2)} m | VEL: ${speed} m/s<br>
+        RUMBO: ${yawDeg}° | VPS: ${drone.vpsActive ? 'BLOQUEADO' : 'CIEGO'}
+      `;
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    camera.position.set(0, 0.8, 2.2);
+    camera.lookAt(0, 0.1, 0);
+    loop();
+  </script>
+</body>
+</html>
