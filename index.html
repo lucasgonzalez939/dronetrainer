@@ -1234,7 +1234,7 @@
       ovDesc.textContent        = "Has superado todos los niveles con éxito. ¡Felicidades!";
       ovObjectives.innerHTML    = "<li>Puedes seguir practicando en Modo Libre</li><li>Obstáculos aleatorios y viento configurable</li>";
       btnStartLevel.textContent = "↺ JUGAR DE NUEVO";
-      btnFreestyleBtn.style.display = 'inline-block';
+      btnFreestyle.style.display = 'inline-block';
       btnPrevLevel.style.display    = 'none';
       levelOverlay.classList.add('active');
       currentLevel = 0;
@@ -1404,6 +1404,9 @@
       document.getElementById('fs-best').textContent = fsBestLapTime === Infinity ? '--' : fsBestLapTime.toFixed(2) + 's';
     }
 
+    // Reusable vector for gate-local-space transform
+    const _gateLocalPos = new THREE.Vector3();
+
     function updateFreestyleLogic(dt) {
       if (!isFreestyleMode) return;
 
@@ -1411,8 +1414,19 @@
 
       for (const gate of fsFreestyleGates) {
         if (gate._passed) continue;
+
+        // Quick sphere pre-check to skip distant gates cheaply
         const d = drone.pos.distanceTo(gate.center);
-        if (d < gate.radius && Math.abs(drone.pos.z - gate.center.z) < 0.6) {
+        if (d >= gate.radius + 0.8) continue;
+
+        // Transform drone position into the gate's local space so the depth
+        // test is always along the gate's own normal axis (local Z), regardless
+        // of the gate's world rotation.
+        gate.group.worldToLocal(_gateLocalPos.copy(drone.pos));
+        const withinOpening = Math.sqrt(_gateLocalPos.x * _gateLocalPos.x + _gateLocalPos.y * _gateLocalPos.y) < gate.radius;
+        const nearPlane     = Math.abs(_gateLocalPos.z) < 0.6;
+
+        if (withinOpening && nearPlane) {
           gate._passed = true;
           gate.setSuccess();
           fsGatesPassed++;
@@ -1444,8 +1458,8 @@
     }
 
     // Wire up freestyle buttons
-    const btnFreestyleBtn = document.getElementById('btn-freestyle');
-    btnFreestyleBtn.addEventListener('click', () => {
+    const btnFreestyle = document.getElementById('btn-freestyle');
+    btnFreestyle.addEventListener('click', () => {
       levelOverlay.classList.remove('active');
       loadFreestyle();
     });
@@ -1584,7 +1598,7 @@
     new VirtualJoystick('right-zone', 'right-knob', (x,y) => { rawInput.roll=x; rawInput.pitch=-y; });
 
     // =====================================================================
-    // --- 11. BUCLE DE ANIMACIÓN ---
+    // --- 12. BUCLE DE ANIMACIÓN ---
     // =====================================================================
     const telemetryEl = document.getElementById('telemetry');
     const clock = new THREE.Clock();
