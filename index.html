@@ -632,7 +632,7 @@
       {
         name: "NIVEL 3",
         subtitle: "Alturas Variables y Aro Móvil",
-        desc: "Los aros están a diferentes alturas. El tercer aro se mueve lateralmente. El viento gusta con más intensidad.",
+        desc: "Los aros están a diferentes alturas. El tercer aro se mueve lateralmente. El viento sopla con más intensidad.",
         objectives: [
           "Sube al Aro 1 (alto, 2.5 m)",
           "Baja al Aro 2 (bajo, 0.9 m) — cuidado con el suelo",
@@ -840,7 +840,6 @@
       if (currentLevel > 0) {
         currentLevel--;
         showLevelOverlay(currentLevel, true);
-        loadLevel(currentLevel);
       }
     });
 
@@ -1061,10 +1060,15 @@
       movingGate.group.position.x = newX;
       movingGate.center.x = newX;
 
-      // Reubicar bounding boxes de este gate
+      // Actualizar bounding boxes de las partes del aro móvil en el array de obstáculos
       movingGate.group.children.forEach(part => {
         part.updateWorldMatrix(true, false);
       });
+      for (const colBox of obstacles) {
+        if (movingGate.group.children.includes(colBox.mesh)) {
+          colBox.box.setFromObject(colBox.mesh);
+        }
+      }
     }
 
     // =====================================================================
@@ -1109,7 +1113,6 @@
         const dist = Math.hypot(drone.pos.x - padPos.x, drone.pos.z - padPos.z);
         if (dist <= landRadius) {
           currentMissionIdx++;
-          missionTimer += 0; // freeze
           timerRunning = false;
 
           const isLastLevel = (currentLevel >= LEVEL_DEFS.length - 1);
