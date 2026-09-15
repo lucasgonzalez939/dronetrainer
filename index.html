@@ -18,7 +18,7 @@
       overflow: hidden;
       background: #000;
       touch-action: none;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: 'Arial', sans-serif;
     }
     #canvas-container {
       width: 100%;
@@ -37,62 +37,228 @@
       z-index: 2;
       pointer-events: none;
     }
-    .hud-box {
+
+    /* ── TOP HUD BAR ── */
+    #top-bar {
       position: absolute;
-      color: #00ffcc;
-      background: rgba(10, 20, 30, 0.85);
-      border: 1px solid rgba(0, 255, 204, 0.3);
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 13px;
-      line-height: 1.4;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      top: 0; left: 0; right: 0;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      background: rgba(0,0,0,0.55);
+      padding: 0 12px;
+      pointer-events: auto;
     }
-    #telemetry { top: 15px; left: 15px; }
+
+    /* Left icon group */
+    .top-icons-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .top-icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.75);
+      background: transparent;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+      flex-shrink: 0;
+    }
+    .top-icon-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .top-icon-btn:active { opacity: 0.7; }
+
+    /* Center status strip */
+    #top-status {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
+    }
+    #status-battery {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .bat-icon {
+      width: 22px;
+      height: 12px;
+      border: 1.5px solid #e53935;
+      border-radius: 2px;
+      position: relative;
+      display: inline-block;
+    }
+    .bat-icon::after {
+      content: '';
+      position: absolute;
+      right: -5px;
+      top: 2px;
+      width: 3px;
+      height: 6px;
+      background: #e53935;
+      border-radius: 0 1px 1px 0;
+    }
+    .bat-fill {
+      height: 100%;
+      background: #e53935;
+      border-radius: 1px;
+      transition: width 0.4s;
+    }
+    #status-wifi svg, #status-bt svg { width:18px; height:18px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+    #status-sep { color: rgba(255,255,255,0.3); font-size: 18px; font-weight: 100; }
+    #status-speed { color: #ff4444; font-weight: bold; letter-spacing: 0.5px; }
+    #status-alt   { color: #fff; letter-spacing: 0.5px; }
+
+    /* Right icon group */
+    .top-icons-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    /* Flight / media buttons on right (play, video, record) */
+    #btn-flight {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.85);
+      background: transparent;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+      flex-shrink: 0;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    #btn-flight svg { width:22px; height:22px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+    #btn-flight:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btn-flight.state-fly  { border-color: #4caf50; }
+    #btn-flight.state-fly svg { stroke: #4caf50; }
+    #btn-flight.state-land { border-color: #ff9800; }
+    #btn-flight.state-land svg { stroke: #ff9800; }
+    #btn-flight.state-crash { border-color: #e53935; }
+    #btn-flight.state-crash svg { stroke: #e53935; }
+
+    /* Video / Photo placeholder buttons */
+    .top-media-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.6);
+      background: transparent;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      pointer-events: auto;
+      cursor: default;
+      opacity: 0.55;
+    }
+    .top-media-btn svg { width:20px; height:20px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+    /* Record/photo button (large white circle) */
+    #btn-record {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      pointer-events: auto;
+      cursor: default;
+      opacity: 0.55;
+    }
+    #btn-record-inner {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.7);
+    }
+
+    /* Mission HUD – centred below top bar */
     #mission-hud {
-      top: 15px;
+      position: absolute;
+      top: 62px;
       left: 50%;
       transform: translateX(-50%);
       text-align: center;
-      min-width: 320px;
+      min-width: 280px;
+      color: #fff;
+      background: rgba(0,0,0,0.45);
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.5;
+      pointer-events: none;
     }
     .mission-title {
       color: #ffca28;
       font-weight: bold;
-      font-size: 14px;
-      margin-bottom: 3px;
+      font-size: 13px;
+      margin-bottom: 2px;
     }
     #vps-warning {
       color: #ff3d00;
       font-weight: bold;
       display: none;
-      margin-top: 4px;
+      margin-top: 3px;
       animation: blink 0.8s infinite;
     }
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.2; }
     }
-    .btn-flight {
+
+    /* Battery countdown bar */
+    #battery-bar-wrap {
+      display: none;
       position: absolute;
-      top: 15px;
-      right: 15px;
-      pointer-events: auto;
-      background: #ff5722;
-      color: #fff;
-      border: none;
-      padding: 12px 20px;
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 1px;
+      top: 62px;
+      right: 12px;
+      width: 120px;
+      background: rgba(0,0,0,0.45);
       border-radius: 4px;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      padding: 4px 8px;
+      font-size: 11px;
+      color: #ff9800;
+      pointer-events: none;
     }
-    .btn-flight:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+    #battery-bar-label { margin-bottom: 2px; font-weight: bold; }
+    #battery-bar-track {
+      height: 6px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 3px;
+      overflow: hidden;
     }
+    #battery-bar-fill {
+      height: 100%;
+      background: #ff9800;
+      border-radius: 3px;
+      transition: width 0.5s, background 0.5s;
+    }
+
     /* Level overlay */
     #level-overlay {
       display: none;
@@ -107,6 +273,7 @@
       justify-content: center;
       text-align: center;
       color: #fff;
+      font-family: 'Arial', sans-serif;
     }
     #level-overlay.active { display: flex; }
     #level-overlay h1 {
@@ -148,134 +315,289 @@
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.4);
       margin: 6px;
+      font-family: 'Arial', sans-serif;
     }
     .btn-overlay.secondary {
       background: #37474f;
       font-size: 12px;
       padding: 10px 24px;
     }
-    #level-badge {
-      position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: none;
-    }
-    /* Joysticks Táctiles */
-    .joystick-zone {
-      position: absolute;
-      bottom: 25px;
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.04);
-      border: 2px solid rgba(255, 255, 255, 0.12);
-      pointer-events: auto;
-    }
-    .deadzone-guide {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 24px;
-      height: 24px;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      border: 1px dashed rgba(255, 255, 255, 0.25);
-      pointer-events: none;
-    }
-    .stick-label {
-      position: absolute;
-      top: -22px;
-      width: 100%;
-      text-align: center;
-      color: #88a0b0;
-      font-size: 11px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-    }
-    #left-zone { left: 25px; }
-    #right-zone { right: 25px; }
-    
-    .stick-knob {
-      position: absolute;
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
-      background: rgba(0, 255, 204, 0.45);
-      border: 2px solid #00ffcc;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      transition: transform 0.05s ease-out;
-    }
     .btn-overlay.freestyle {
       background: #00897b;
       font-size: 14px;
       padding: 13px 30px;
     }
+
+    /* ── JOYSTICK PADS (DJI style) ── */
+    .joystick-zone {
+      position: absolute;
+      bottom: 22px;
+      width: 190px;
+      height: 190px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, rgba(80,80,80,0.55) 0%, rgba(30,30,30,0.75) 70%, rgba(0,0,0,0.85) 100%);
+      pointer-events: auto;
+      /* subtle outer glow */
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.07), 0 6px 24px rgba(0,0,0,0.7);
+    }
+    #left-zone  { left: 20px; }
+    #right-zone { right: 20px; }
+
+    /* Directional arrow indicators (SVG overlays) */
+    .joy-arrow {
+      position: absolute;
+      pointer-events: none;
+      fill: rgba(255,255,255,0.45);
+    }
+    /* top arrow */
+    .joy-arrow-up    { top: 12px;  left: 50%; transform: translateX(-50%); }
+    /* bottom arrow */
+    .joy-arrow-down  { bottom: 12px; left: 50%; transform: translateX(-50%) rotate(180deg); }
+    /* left arrow */
+    .joy-arrow-left  { left: 12px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+    /* right arrow */
+    .joy-arrow-right { right: 12px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+
+    /* Circular rotation arrows for left stick (yaw) */
+    .joy-arrow-ccw   { left: 28px; top: 50%; transform: translateY(-50%); }
+    .joy-arrow-cw    { right: 28px; top: 50%; transform: translateY(-50%) scaleX(-1); }
+
+    .stick-knob {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, rgba(120,120,120,0.5), rgba(40,40,40,0.9));
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.15);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
     /* Freestyle HUD */
     #freestyle-hud {
       display: none;
       position: absolute;
-      top: 15px;
+      top: 62px;
       left: 50%;
       transform: translateX(-50%);
       text-align: center;
-      min-width: 280px;
-      color: #00ffcc;
-      background: rgba(10, 20, 30, 0.85);
-      border: 1px solid rgba(0, 255, 204, 0.3);
-      padding: 8px 14px;
+      min-width: 240px;
+      color: #fff;
+      background: rgba(0,0,0,0.45);
+      padding: 5px 14px;
       border-radius: 4px;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.5;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
     #freestyle-hud .fs-title {
       color: #80cbc4;
       font-weight: bold;
       font-size: 11px;
       letter-spacing: 2px;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     #freestyle-hud .fs-score {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
       color: #ffd54f;
     }
+
     /* Freestyle control panel */
     #freestyle-panel {
       display: none;
       position: absolute;
-      bottom: 230px;
+      bottom: 225px;
       left: 50%;
       transform: translateX(-50%);
       pointer-events: auto;
       flex-direction: row;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
     }
     .btn-freestyle-ctrl {
       pointer-events: auto;
       border: none;
-      padding: 9px 16px;
-      font-size: 12px;
+      padding: 8px 14px;
+      font-size: 11px;
       font-weight: bold;
       letter-spacing: 1px;
       border-radius: 4px;
       cursor: pointer;
       box-shadow: 0 3px 8px rgba(0,0,0,0.3);
       color: #fff;
+      font-family: 'Arial', sans-serif;
     }
-    #btn-new-map    { background: #0288d1; }
-    #btn-exit-free  { background: #546e7a; }
-    .wind-btn {
-      background: #37474f;
-      font-size: 11px;
-      padding: 7px 12px;
-    }
+    #btn-new-map   { background: #0288d1; }
+    #btn-exit-free { background: #546e7a; }
+    .wind-btn { background: #37474f; font-size: 11px; padding: 7px 11px; }
     .wind-btn.active { background: #00695c; }
+
+    /* ── CONFIG MENU ── */
+    #config-overlay {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.72);
+      z-index: 20;
+      pointer-events: auto;
+      align-items: center;
+      justify-content: center;
+    }
+    #config-overlay.active { display: flex; }
+    #config-panel {
+      background: #111;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      width: min(420px, 92vw);
+      max-height: 88vh;
+      overflow-y: auto;
+      padding: 20px 24px 24px;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
+    }
+    #config-panel h2 {
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #fff;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #config-panel h2 svg { width:18px;height:18px;stroke:#fff;stroke-width:2;fill:none; }
+    .cfg-section {
+      margin-bottom: 20px;
+    }
+    .cfg-section-title {
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.45);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 4px;
+    }
+    /* Speed selector */
+    .cfg-speed-row {
+      display: flex;
+      gap: 8px;
+    }
+    .cfg-speed-btn {
+      flex: 1;
+      padding: 10px 6px;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      font-family: 'Arial', sans-serif;
+    }
+    .cfg-speed-btn.active {
+      border-color: #fff;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+    /* Toggle rows */
+    .cfg-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .cfg-toggle-row:last-child { border-bottom: none; }
+    .cfg-toggle-label {
+      font-size: 13px;
+      color: rgba(255,255,255,0.85);
+      flex: 1;
+    }
+    .cfg-toggle-sub {
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 1px;
+    }
+    /* iOS-style toggle switch */
+    .cfg-toggle {
+      position: relative;
+      width: 44px;
+      height: 26px;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .cfg-toggle input { opacity: 0; width: 0; height: 0; }
+    .cfg-toggle-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 13px;
+      background: rgba(255,255,255,0.15);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .cfg-toggle input:checked + .cfg-toggle-track { background: #4caf50; }
+    .cfg-toggle-track::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px; left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .cfg-toggle input:checked + .cfg-toggle-track::before {
+      transform: translateX(18px);
+    }
+    /* Intensity sliders */
+    .cfg-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0 8px;
+    }
+    .cfg-slider-row label { font-size: 11px; color: rgba(255,255,255,0.5); width: 70px; flex-shrink: 0; }
+    .cfg-slider-row input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.2);
+      outline: none;
+      cursor: pointer;
+    }
+    .cfg-slider-row input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .cfg-slider-value { font-size: 11px; color: rgba(255,255,255,0.6); width: 24px; text-align: right; flex-shrink: 0; }
+    /* Close button */
+    #btn-config-close {
+      width: 100%;
+      margin-top: 6px;
+      padding: 11px;
+      border-radius: 6px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      font-family: 'Arial', sans-serif;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -291,32 +613,166 @@
     <button class="btn-overlay secondary" id="btn-prev-level" style="display:none">◀ NIVEL ANTERIOR</button>
   </div>
 
+  <!-- Config menu overlay -->
+  <div id="config-overlay">
+    <div id="config-panel">
+      <h2>
+        <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        CONFIGURACIÓN
+      </h2>
+
+      <!-- Speed preset -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">VELOCIDAD DE RESPUESTA</div>
+        <div class="cfg-speed-row">
+          <button class="cfg-speed-btn" id="cfg-speed-slow" data-speed="slow">🐢 LENTO</button>
+          <button class="cfg-speed-btn active" id="cfg-speed-normal" data-speed="normal">🎯 NORMAL</button>
+          <button class="cfg-speed-btn" id="cfg-speed-fast" data-speed="fast">⚡ RÁPIDO</button>
+        </div>
+      </div>
+
+      <!-- Difficulty toggles -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">DIFICULTAD</div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">🔋 Batería limitada</div>
+            <div class="cfg-toggle-sub">Tiempo máximo para completar la misión</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-battery-on">
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+        <div class="cfg-slider-row" id="cfg-battery-slider-row" style="display:none">
+          <label>Tiempo</label>
+          <input type="range" id="cfg-battery-time" min="30" max="300" step="10" value="120">
+          <span class="cfg-slider-value" id="cfg-battery-time-val">120s</span>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">💨 Viento</div>
+            <div class="cfg-toggle-sub">Fuerza de viento lateral en vuelo</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-wind-on" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+        <div class="cfg-slider-row" id="cfg-wind-slider-row">
+          <label>Intensidad</label>
+          <input type="range" id="cfg-wind-strength" min="0" max="5" step="0.5" value="1">
+          <span class="cfg-slider-value" id="cfg-wind-strength-val">1.0</span>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">🌀 Turbulencia</div>
+            <div class="cfg-toggle-sub">Sacudidas aleatorias durante el vuelo</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-turb-on">
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+        <div class="cfg-slider-row" id="cfg-turb-slider-row" style="display:none">
+          <label>Intensidad</label>
+          <input type="range" id="cfg-turb-strength" min="0" max="5" step="0.5" value="1">
+          <span class="cfg-slider-value" id="cfg-turb-strength-val">1.0</span>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">⚡ VPS / Deriva</div>
+            <div class="cfg-toggle-sub">Zonas de pérdida de posicionamiento</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-vps-on" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <button id="btn-config-close">CERRAR</button>
+    </div>
+  </div>
+
   <div id="canvas-container"></div>
 
   <div id="ui-layer">
-    <div class="hud-box" id="telemetry">
-      TELLO: EN ESPERA<br>
-      ALT: 0.00 m | VEL: 0.0 m/s<br>
-      RUMBO: 0° | VIENTO: 0.4 m/s
+    <!-- Top bar -->
+    <div id="top-bar">
+      <!-- Left icons: back/return, drone icon, settings -->
+      <div class="top-icons-left">
+        <!-- Return-to-home icon -->
+        <button class="top-icon-btn" id="btn-rth" title="Volver al inicio">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </button>
+        <!-- Drone/fly icon -->
+        <button class="top-icon-btn" id="btn-drone-icon" title="Estado del dron" style="cursor:default; pointer-events:none;">
+          <svg viewBox="0 0 24 24"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><line x1="5" y1="7" x2="9" y2="9"/><line x1="19" y1="7" x2="15" y2="9"/><line x1="5" y1="17" x2="9" y2="15"/><line x1="19" y1="17" x2="15" y2="15"/></svg>
+        </button>
+        <!-- Gear / config -->
+        <button class="top-icon-btn" id="btn-open-config" title="Configuración">
+          <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+      </div>
+
+      <!-- Center status strip -->
+      <div id="top-status">
+        <div id="status-battery">
+          <span class="bat-icon"><span class="bat-fill" id="bat-fill-bar" style="width:100%"></span></span>
+        </div>
+        <span id="status-wifi">
+          <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1" fill="#fff"/></svg>
+        </span>
+        <span id="status-bt">
+          <svg viewBox="0 0 24 24"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/></svg>
+        </span>
+        <span id="status-sep">|</span>
+        <span id="status-speed">HS 0.0m/s</span>
+        <span id="status-alt">H 0.0m</span>
+      </div>
+
+      <!-- Right icons: play, video, record -->
+      <div class="top-icons-right">
+        <!-- Takeoff / Land button -->
+        <button id="btn-flight" title="Despegar / Aterrizar">
+          <svg viewBox="0 0 24 24" id="btn-flight-icon"><polygon points="5 3 19 12 5 21 5 3" fill="#fff" stroke="none"/></svg>
+        </button>
+        <!-- Video placeholder -->
+        <div class="top-media-btn" title="Vídeo">
+          <svg viewBox="0 0 24 24"><rect x="2" y="7" width="13" height="10" rx="2"/><polygon points="23 7 16 12 23 17 23 7"/></svg>
+        </div>
+        <!-- Record placeholder -->
+        <div id="btn-record"><div id="btn-record-inner"></div></div>
+      </div>
     </div>
 
-    <div class="hud-box" id="mission-hud">
+    <!-- Mission HUD -->
+    <div id="mission-hud">
       <div class="mission-title" id="mission-title">MISIÓN 1 / 3</div>
       <div id="mission-desc">Despega y atraviesa lentamente el Aro 1</div>
       <div id="vps-warning">⚠ ALERTA: VPS CIEGO (DERIVA ACTIVA) ⚠</div>
-      <div id="mission-timer" style="color:#aaa; font-size:11px; margin-top:3px;">TIEMPO: 00:00.0</div>
+      <div id="mission-timer" style="color:rgba(255,255,255,0.55); font-size:11px; margin-top:2px;">TIEMPO: 00:00.0</div>
     </div>
 
-    <button class="btn-flight" id="btn-flight">DESPEGAR</button>
+    <!-- Battery countdown bar (difficulty) -->
+    <div id="battery-bar-wrap">
+      <div id="battery-bar-label">🔋 <span id="battery-bar-text">120s</span></div>
+      <div id="battery-bar-track"><div id="battery-bar-fill" style="width:100%"></div></div>
+    </div>
 
     <!-- Freestyle mode HUD -->
     <div id="freestyle-hud">
       <div class="fs-title">🎮 MODO LIBRE</div>
       <div>AROS: <span class="fs-score" id="fs-gates">0</span> &nbsp; TIEMPO: <span id="fs-time">00:00.0</span></div>
-      <div style="font-size:11px; color:#80cbc4; margin-top:2px;">MEJOR TRAMO: <span id="fs-best">--</span></div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-top:2px;">MEJOR TRAMO: <span id="fs-best">--</span></div>
     </div>
 
-    <!-- Freestyle control panel (wind preset + map reset + exit) -->
+    <!-- Freestyle control panel -->
     <div id="freestyle-panel">
       <button class="btn-freestyle-ctrl wind-btn active" data-wind="calm"  id="wind-calm">🌬 CALMA</button>
       <button class="btn-freestyle-ctrl wind-btn"        data-wind="mod"   id="wind-mod">💨 MODERADO</button>
@@ -325,14 +781,29 @@
       <button class="btn-freestyle-ctrl" id="btn-exit-free">✕ SALIR</button>
     </div>
 
+    <!-- Left joystick: Throttle (up/down) + Yaw (left/right) -->
     <div class="joystick-zone" id="left-zone">
-      <div class="stick-label">ALTURA / GIRO (YAW)</div>
-      <div class="deadzone-guide"></div>
+      <!-- Up arrow (throttle up) -->
+      <svg class="joy-arrow joy-arrow-up" width="16" height="12" viewBox="0 0 16 12"><polygon points="8,0 16,12 0,12"/></svg>
+      <!-- Down arrow (throttle down) -->
+      <svg class="joy-arrow joy-arrow-down" width="16" height="12" viewBox="0 0 16 12"><polygon points="8,0 16,12 0,12"/></svg>
+      <!-- Rotation arrows (yaw) -->
+      <svg class="joy-arrow joy-arrow-ccw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5" stroke-linecap="round">
+        <path d="M3 12a9 9 0 109-9H9"/><polyline points="6 7 9 4 6 1"/>
+      </svg>
+      <svg class="joy-arrow joy-arrow-cw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5" stroke-linecap="round">
+        <path d="M3 12a9 9 0 109-9H9"/><polyline points="6 7 9 4 6 1"/>
+      </svg>
       <div class="stick-knob" id="left-knob"></div>
     </div>
+
+    <!-- Right joystick: Pitch (forward/back) + Roll (left/right) -->
     <div class="joystick-zone" id="right-zone">
-      <div class="stick-label">INCLINACIÓN (AVANCE / LATERAL)</div>
-      <div class="deadzone-guide"></div>
+      <!-- Directional arrows -->
+      <svg class="joy-arrow joy-arrow-up"    width="16" height="12" viewBox="0 0 16 12"><polygon points="8,0 16,12 0,12"/></svg>
+      <svg class="joy-arrow joy-arrow-down"  width="16" height="12" viewBox="0 0 16 12"><polygon points="8,0 16,12 0,12"/></svg>
+      <svg class="joy-arrow joy-arrow-left"  width="16" height="12" viewBox="0 0 16 12"><polygon points="8,0 16,12 0,12"/></svg>
+      <svg class="joy-arrow joy-arrow-right" width="16" height="12" viewBox="0 0 16 12"><polygon points="8,0 16,12 0,12"/></svg>
       <div class="stick-knob" id="right-knob"></div>
     </div>
   </div>
@@ -503,6 +974,35 @@
       VPS_FAIL_DRAG:  0.25,
       TILT_FACTOR:    0.12
     };
+
+    // ── SPEED PRESETS ──
+    const SPEED_PRESETS = {
+      slow:   { MAX_SPEED:1.2, MAX_VERT_SPEED:0.5, MAX_YAW_RATE:0.9, INPUT_FILTER:4.0, ACCEL_DAMP:2.0 },
+      normal: { MAX_SPEED:2.6, MAX_VERT_SPEED:1.0, MAX_YAW_RATE:1.8, INPUT_FILTER:6.0, ACCEL_DAMP:3.5 },
+      fast:   { MAX_SPEED:4.5, MAX_VERT_SPEED:1.8, MAX_YAW_RATE:3.0, INPUT_FILTER:9.0, ACCEL_DAMP:5.5 }
+    };
+
+    function applySpeedPreset(name) {
+      const p = SPEED_PRESETS[name];
+      Object.assign(CONFIG, p);
+      document.querySelectorAll('.cfg-speed-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.speed === name);
+      });
+    }
+
+    // ── DIFFICULTY CONFIG ──
+    const DIFFICULTY = {
+      batteryOn:    false,
+      batteryTime:  120,   // seconds
+      windOn:       true,
+      windStrength: 1.0,   // multiplier on windVector
+      turbOn:       false,
+      turbStrength: 1.0,
+      vpsOn:        true
+    };
+
+    let batteryTimeLeft = 0;
+    let batteryDepleted = false;
 
     // =====================================================================
     // --- 5. SISTEMA MULTI-NIVEL ---
@@ -1008,13 +1508,15 @@
 
       // Verificación VPS en cualquier zona de perturbación del nivel
       let inSlick = false;
-      for (const sz of levelSlickZones) {
-        const b = sz.bounds;
-        if (drone.pos.x >= b.minX && drone.pos.x <= b.maxX &&
-            drone.pos.z >= b.minZ && drone.pos.z <= b.maxZ &&
-            drone.pos.y <= 2.5) {
-          inSlick = true;
-          break;
+      if (DIFFICULTY.vpsOn) {
+        for (const sz of levelSlickZones) {
+          const b = sz.bounds;
+          if (drone.pos.x >= b.minX && drone.pos.x <= b.maxX &&
+              drone.pos.z >= b.minZ && drone.pos.z <= b.maxZ &&
+              drone.pos.y <= 2.5) {
+            inSlick = true;
+            break;
+          }
         }
       }
 
@@ -1027,7 +1529,19 @@
         : LEVEL_DEFS[currentLevel].windScale;
       const gustAmp = activeWindScale * 0.12;
       const gust = Math.sin(elapsedTime * 1.5) * gustAmp;
-      const currentWind = windVector.clone().multiplyScalar(1.0 + gust);
+      const windMult = DIFFICULTY.windOn ? DIFFICULTY.windStrength : 0;
+      const currentWind = windVector.clone().multiplyScalar((1.0 + gust) * windMult);
+
+      // Turbulencia aleatoria
+      const turbForce = new THREE.Vector3(0, 0, 0);
+      if (DIFFICULTY.turbOn && drone.state === FlightState.FLYING) {
+        const t = elapsedTime;
+        turbForce.set(
+          (Math.sin(t * 7.3) + Math.sin(t * 3.1)) * 0.5 * DIFFICULTY.turbStrength * 0.4,
+          (Math.sin(t * 5.7) + Math.sin(t * 2.9)) * 0.25 * DIFFICULTY.turbStrength * 0.3,
+          (Math.sin(t * 6.1) + Math.sin(t * 4.3)) * 0.5 * DIFFICULTY.turbStrength * 0.4
+        );
+      }
 
       switch (drone.state) {
         case FlightState.LANDED:
@@ -1088,6 +1602,9 @@
               drone.vel.addScaledVector(currentWind, dt * 1.8);
             }
           }
+
+          // Apply turbulence
+          drone.vel.addScaledVector(turbForce, dt);
 
           if (filteredInput.throttle === 0) {
             drone.vel.y *= Math.max(0, 1.0 - CONFIG.NORMAL_DRAG * dt);
@@ -1486,37 +2003,66 @@
 
     const btnFlight = document.getElementById('btn-flight');
 
+    // SVG icon helpers for the flight button
+    const FLIGHT_ICON_PLAY  = '<polygon points="5 3 19 12 5 21 5 3" fill="#fff" stroke="none"/>';
+    const FLIGHT_ICON_LAND  = '<rect x="5" y="10" width="14" height="3" fill="#fff" rx="1"/><rect x="3" y="18" width="18" height="3" fill="#fff" rx="1"/>';
+    const FLIGHT_ICON_WAIT  = '<circle cx="12" cy="12" r="8" stroke="#fff" stroke-width="2" fill="none" stroke-dasharray="4 4"/>';
+    const FLIGHT_ICON_CRASH = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+
+    function setFlightIconSVG(innerSVG, stateClass) {
+      const iconEl = document.getElementById('btn-flight-icon');
+      if (iconEl) iconEl.innerHTML = innerSVG;
+      btnFlight.className = stateClass || '';
+    }
+
     function setFlightState(newState) {
       drone.state = newState;
       switch (newState) {
         case FlightState.LANDED:
-          btnFlight.textContent = 'DESPEGAR';
-          btnFlight.style.background = '#ff5722';
+          setFlightIconSVG(FLIGHT_ICON_PLAY, '');
           btnFlight.disabled = false;
+          batteryDepleted = false;
+          document.getElementById('battery-bar-wrap').style.display = 'none';
           break;
         case FlightState.TAKING_OFF:
-          btnFlight.textContent = 'ARMANDO...';
-          btnFlight.style.background = '#ff9800';
+          setFlightIconSVG(FLIGHT_ICON_WAIT, 'state-land');
           btnFlight.disabled = true;
           timerRunning = true;
+          // Start battery countdown if enabled
+          if (DIFFICULTY.batteryOn) {
+            batteryTimeLeft = DIFFICULTY.batteryTime;
+            batteryDepleted = false;
+            document.getElementById('battery-bar-wrap').style.display = 'block';
+            updateBatteryBar();
+          }
           break;
         case FlightState.FLYING:
-          btnFlight.textContent = 'ATERRIZAR';
-          btnFlight.style.background = '#00c853';
+          setFlightIconSVG(FLIGHT_ICON_LAND, 'state-fly');
           btnFlight.disabled = false;
           break;
         case FlightState.LANDING:
-          btnFlight.textContent = 'BAJANDO...';
-          btnFlight.style.background = '#ff9800';
+          setFlightIconSVG(FLIGHT_ICON_WAIT, 'state-land');
           btnFlight.disabled = true;
           break;
         case FlightState.CRASHED:
-          btnFlight.textContent = 'REINICIAR';
-          btnFlight.style.background = '#d50000';
+          setFlightIconSVG(FLIGHT_ICON_CRASH, 'state-crash');
           btnFlight.disabled = false;
           timerRunning = false;
           break;
       }
+    }
+
+    function updateBatteryBar() {
+      const total = DIFFICULTY.batteryTime;
+      const pct   = Math.max(0, batteryTimeLeft / total * 100);
+      const fill  = document.getElementById('battery-bar-fill');
+      const text  = document.getElementById('battery-bar-text');
+      if (fill) fill.style.width = pct + '%';
+      if (fill) fill.style.background = pct > 40 ? '#4caf50' : pct > 20 ? '#ff9800' : '#e53935';
+      if (text) text.textContent = Math.ceil(batteryTimeLeft) + 's';
+      // Also update the top-bar battery icon
+      const topFill = document.getElementById('bat-fill-bar');
+      if (topFill) topFill.style.width = pct + '%';
     }
 
     btnFlight.addEventListener('click', () => {
@@ -1530,6 +2076,73 @@
         } else {
           loadLevel(currentLevel);
         }
+      }
+    });
+
+    // ── CONFIG MENU WIRING ──
+    document.getElementById('btn-open-config').addEventListener('click', () => {
+      document.getElementById('config-overlay').classList.add('active');
+    });
+    document.getElementById('btn-config-close').addEventListener('click', () => {
+      document.getElementById('config-overlay').classList.remove('active');
+    });
+
+    // Speed buttons
+    document.querySelectorAll('.cfg-speed-btn').forEach(btn => {
+      btn.addEventListener('click', () => applySpeedPreset(btn.dataset.speed));
+    });
+
+    // Battery toggle
+    const cfgBatteryOn  = document.getElementById('cfg-battery-on');
+    const cfgBatteryRow = document.getElementById('cfg-battery-slider-row');
+    const cfgBatteryTime= document.getElementById('cfg-battery-time');
+    const cfgBatteryVal = document.getElementById('cfg-battery-time-val');
+    cfgBatteryOn.addEventListener('change', () => {
+      DIFFICULTY.batteryOn = cfgBatteryOn.checked;
+      cfgBatteryRow.style.display = cfgBatteryOn.checked ? 'flex' : 'none';
+    });
+    cfgBatteryTime.addEventListener('input', () => {
+      DIFFICULTY.batteryTime = +cfgBatteryTime.value;
+      cfgBatteryVal.textContent = cfgBatteryTime.value + 's';
+    });
+
+    // Wind toggle
+    const cfgWindOn    = document.getElementById('cfg-wind-on');
+    const cfgWindRow   = document.getElementById('cfg-wind-slider-row');
+    const cfgWindStr   = document.getElementById('cfg-wind-strength');
+    const cfgWindVal   = document.getElementById('cfg-wind-strength-val');
+    cfgWindOn.addEventListener('change', () => {
+      DIFFICULTY.windOn = cfgWindOn.checked;
+      cfgWindRow.style.display = cfgWindOn.checked ? 'flex' : 'none';
+    });
+    cfgWindStr.addEventListener('input', () => {
+      DIFFICULTY.windStrength = +cfgWindStr.value;
+      cfgWindVal.textContent = (+cfgWindStr.value).toFixed(1);
+    });
+
+    // Turbulence toggle
+    const cfgTurbOn   = document.getElementById('cfg-turb-on');
+    const cfgTurbRow  = document.getElementById('cfg-turb-slider-row');
+    const cfgTurbStr  = document.getElementById('cfg-turb-strength');
+    const cfgTurbVal  = document.getElementById('cfg-turb-strength-val');
+    cfgTurbOn.addEventListener('change', () => {
+      DIFFICULTY.turbOn = cfgTurbOn.checked;
+      cfgTurbRow.style.display = cfgTurbOn.checked ? 'flex' : 'none';
+    });
+    cfgTurbStr.addEventListener('input', () => {
+      DIFFICULTY.turbStrength = +cfgTurbStr.value;
+      cfgTurbVal.textContent = (+cfgTurbStr.value).toFixed(1);
+    });
+
+    // VPS toggle
+    document.getElementById('cfg-vps-on').addEventListener('change', (e) => {
+      DIFFICULTY.vpsOn = e.target.checked;
+    });
+
+    // Return-to-home button: initiate landing
+    document.getElementById('btn-rth').addEventListener('click', () => {
+      if (drone.state === FlightState.FLYING) {
+        setFlightState(FlightState.LANDING);
       }
     });
 
@@ -1594,13 +2207,25 @@
     // =====================================================================
     // --- 12. BUCLE DE ANIMACIÓN ---
     // =====================================================================
-    const telemetryEl = document.getElementById('telemetry');
     const clock = new THREE.Clock();
 
     function loop() {
       requestAnimationFrame(loop);
       const dt          = Math.min(clock.getDelta(), 0.1);
       const elapsedTime = clock.getElapsedTime();
+
+      // Battery countdown
+      if (DIFFICULTY.batteryOn && batteryTimeLeft > 0 &&
+          (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF)) {
+        batteryTimeLeft -= dt;
+        updateBatteryBar();
+        if (batteryTimeLeft <= 0 && !batteryDepleted) {
+          batteryDepleted = true;
+          batteryTimeLeft = 0;
+          // Force emergency landing
+          setFlightState(FlightState.LANDING);
+        }
+      }
 
       updateMovingGate(elapsedTime);
       updateFlightPhysics(dt, elapsedTime);
@@ -1611,14 +2236,12 @@
       }
       renderer.render(scene, camera);
 
-      const speed  = Math.hypot(drone.vel.x, drone.vel.z).toFixed(2);
-      const yawDeg = Math.round(((-drone.yaw * 180/Math.PI) % 360 + 360) % 360);
-      const modeName = isFreestyleMode ? '🎮 MODO LIBRE' : LEVEL_DEFS[currentLevel].name;
-      telemetryEl.innerHTML = `
-        TELLO: ${drone.state} | ${modeName}<br>
-        ALT: ${drone.pos.y.toFixed(2)} m | VEL: ${speed} m/s<br>
-        RUMBO: ${yawDeg}° | VPS: ${drone.vpsActive ? 'ACTIVO' : '⚠ CIEGO'}
-      `;
+      // Update top-bar speed/alt readout
+      const speed  = Math.hypot(drone.vel.x, drone.vel.z);
+      const statusSpeed = document.getElementById('status-speed');
+      const statusAlt   = document.getElementById('status-alt');
+      if (statusSpeed) statusSpeed.textContent = `HS ${speed.toFixed(1)}m/s`;
+      if (statusAlt)   statusAlt.textContent   = `H ${drone.pos.y.toFixed(1)}m`;
     }
 
     window.addEventListener('resize', () => {
