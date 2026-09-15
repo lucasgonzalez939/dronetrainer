@@ -791,7 +791,7 @@
       timerRunning  = false;
 
       const def = LEVEL_DEFS[idx];
-      windVector = def.windDir.clone().multiplyScalar(def.windScale / 1.0);
+      windVector = def.windDir.clone().multiplyScalar(def.windScale);
 
       def.setup();
 
@@ -845,7 +845,6 @@
 
     // ------ Mostrar overlay inicial ------
     showLevelOverlay(0, false);
-    loadLevel(0);
 
     // =====================================================================
     // --- 6. DINÁMICA DE VUELO ---
