@@ -15,6 +15,18 @@ const ovObjectives  = document.getElementById('ov-objectives');
 const btnStartLevel = document.getElementById('btn-start-level');
 const btnPrevLevel  = document.getElementById('btn-prev-level');
 const btnFreestyle  = document.getElementById('btn-freestyle');
+const levelFade     = document.getElementById('level-fade');
+
+// Smooth black fade then call fn, then fade back in
+function fadeAndRun(fn) {
+  levelFade.classList.add('fade-out');
+  setTimeout(() => {
+    fn();
+    levelFade.classList.remove('fade-out');
+    levelFade.classList.add('fade-in');
+    setTimeout(() => levelFade.classList.remove('fade-in'), 360);
+  }, 360);
+}
 
 export function showLevelOverlay(idx, isTransition) {
   const def = LEVEL_DEFS[idx];
@@ -79,7 +91,7 @@ export function closeLevelProgressOverlay() {
 export function initOverlayEvents() {
   btnStartLevel.addEventListener('click', () => {
     levelOverlay.classList.remove('active');
-    loadLevel(currentLevel);
+    fadeAndRun(() => loadLevel(currentLevel));
   });
 
   btnPrevLevel.addEventListener('click', () => {
@@ -91,7 +103,7 @@ export function initOverlayEvents() {
 
   btnFreestyle.addEventListener('click', () => {
     levelOverlay.classList.remove('active');
-    loadFreestyle();
+    fadeAndRun(() => loadFreestyle());
   });
 
   document.getElementById('btn-levels').addEventListener('click', openLevelProgressOverlay);
