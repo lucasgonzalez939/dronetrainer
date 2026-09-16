@@ -140,6 +140,55 @@
         </div>
       </div>
 
+      <!-- Flight mode -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">MODO DE VUELO</div>
+        <div class="cfg-speed-row">
+          <button class="cfg-speed-btn active" id="cfg-mode-attitude" data-flightmode="attitude">🎯 ACTITUD</button>
+          <button class="cfg-speed-btn" id="cfg-mode-rate" data-flightmode="rate">⚡ ACRO (RATE)</button>
+        </div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:4px;padding:0 2px 4px;">
+          ACTITUD: auto-nivelado &nbsp;|&nbsp; ACRO: control de tasa (real FPV)
+        </div>
+      </div>
+
+      <!-- Environment -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">ENTORNO</div>
+
+        <div class="cfg-slider-row">
+          <label>Hora del día</label>
+          <input type="range" id="cfg-time-of-day" min="0" max="1" step="0.05" value="0.5">
+          <span class="cfg-slider-value" id="cfg-time-of-day-val">🌅</span>
+        </div>
+
+        <div class="cfg-slider-row">
+          <label>Niebla</label>
+          <input type="range" id="cfg-fog-density" min="0.002" max="0.06" step="0.002" value="0.008">
+          <span class="cfg-slider-value" id="cfg-fog-density-val">0.008</span>
+        </div>
+      </div>
+
+      <!-- Expo curve preview -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">CURVA DE EXPO (VISTA PREVIA)</div>
+        <canvas id="expo-curve-canvas" width="160" height="80" style="display:block;margin:0 auto 4px;border-radius:4px;background:rgba(0,0,0,0.3);"></canvas>
+      </div>
+
+      <!-- Replay -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">REPETICIÓN</div>
+        <button id="btn-start-replay" class="cfg-speed-btn" style="width:100%">▶ VER REPETICIÓN DE VUELO</button>
+        <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:4px;">Disponible tras completar un nivel</div>
+      </div>
+
+      <!-- Keyboard hint -->
+      <div class="cfg-section" style="font-size:9px;color:rgba(255,255,255,0.3);line-height:1.7;">
+        <div class="cfg-section-title">TECLADO / GAMEPAD</div>
+        ↑↓ Subir/Bajar &nbsp; ←→ Girar &nbsp; WASD Pitch/Roll<br>
+        Gamepad: Stick izq. Throttle+Yaw &nbsp; Stick der. Pitch+Roll
+      </div>
+
       <button id="btn-config-close">CERRAR</button>
     </div>
   </div>
@@ -229,6 +278,7 @@
       <div id="mission-desc">Despega y atraviesa lentamente el Aro 1</div>
       <div id="vps-warning">⚠ ALERTA: VPS CIEGO (DERIVA ACTIVA) ⚠</div>
       <div id="mission-timer" style="color:rgba(255,255,255,0.55); font-size:11px; margin-top:2px;">TIEMPO: 00:00.0</div>
+      <div id="mission-hint" style="display:none; color:#ffd740; font-size:10px; margin-top:3px; padding:3px 6px; background:rgba(0,0,0,0.45); border-radius:4px; max-width:260px;"></div>
     </div>
 
     <!-- Battery countdown bar (difficulty) -->

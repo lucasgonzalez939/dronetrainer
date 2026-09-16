@@ -10,7 +10,8 @@ import {
   currentLevel,
   batteryTimeLeft, setBatteryTimeLeft,
   batteryDepleted, setBatteryDepleted,
-  levelSlickZones
+  levelSlickZones,
+  replayBuffer, movingObstacles
 } from './state.js';
 import { updateFlightPhysics } from './physics.js';
 import { updateMovingGate } from './levels.js';
@@ -31,7 +32,35 @@ let lastStatusSpeed = '';
 let lastStatusAlt = '';
 let lastAirborne = null;
 
+// ── Flight-path replay ghost ──────────────────────────────────────────────
+let replayGhost    = null;
+let replayIndex    = 0;
+let replayPlaying  = false;
+let replayTimer    = 0;
+const REPLAY_SPEED = 1.0; // playback speed multiplier
+const REPLAY_INTERVAL = 0.05; // must match REPLAY_SAMPLE_INTERVAL in missions.js
+
+function _buildReplayGhost() {
+  if (replayGhost) { scene.remove(replayGhost); replayGhost = null; }
+  const geo = new THREE.CylinderGeometry(0.10, 0.10, 0.04, 8);
+  const mat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.35, wireframe: false });
+  replayGhost = new THREE.Mesh(geo, mat);
+  replayGhost.visible = false;
+  scene.add(replayGhost);
+}
+
+export function startReplay() {
+  if (replayBuffer.length < 2) return;
+  _buildReplayGhost();
+  replayIndex   = 0;
+  replayTimer   = 0;
+  replayPlaying = true;
+  if (replayGhost) replayGhost.visible = true;
+}
+
 export function startLoop() {
+  _buildReplayGhost();
+
   function loop() {
     requestAnimationFrame(loop);
     const dt          = Math.min(clock.getDelta(), 0.1);
@@ -49,6 +78,16 @@ export function startLoop() {
       }
     }
 
+    // Moving obstacles (sine-driven lateral motion)
+    movingObstacles.forEach(mo => {
+      if (!mo.mesh) return;
+      const newX = mo.originX + Math.sin(elapsedTime * mo.speed) * mo.amplitude;
+      mo.mesh.position.x = newX;
+      mo.center && (mo.center.x = newX);
+      mo.mesh.updateWorldMatrix(true, false);
+      if (mo.box) mo.box.setFromObject(mo.mesh);
+    });
+
     updateMovingGate(elapsedTime);
     updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel);
 
@@ -60,6 +99,19 @@ export function startLoop() {
       if (drone.state === FlightState.LANDED) {
         checkMissionLanding();
       }
+    }
+
+    // ── Replay ghost playback ────────────────────────────────────────────
+    if (replayPlaying && replayGhost && replayBuffer.length > 1) {
+      replayTimer += dt * REPLAY_SPEED;
+      const advanceFrames = Math.floor(replayTimer / REPLAY_INTERVAL);
+      replayTimer -= advanceFrames * REPLAY_INTERVAL;
+      replayIndex += advanceFrames;
+      if (replayIndex >= replayBuffer.length) {
+        replayIndex   = 0; // loop replay
+      }
+      const pt = replayBuffer[replayIndex];
+      replayGhost.position.set(pt.x, pt.y, pt.z);
     }
 
     renderer.render(scene, camera);

@@ -1,5 +1,5 @@
 /**
- * gates.js – Gate / landing pad / slick zone creation and gate-pass detection.
+ * gates.js – Gate / landing pad / slick zone / waypoint / orbit creation and gate-pass detection.
  */
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
@@ -140,3 +140,122 @@ export function checkGatePass(gate, depthThreshold = 0.5) {
   return Math.sqrt(_gateLocalPos.x * _gateLocalPos.x + _gateLocalPos.y * _gateLocalPos.y) < gate.radius
       && Math.abs(_gateLocalPos.z) < depthThreshold;
 }
+
+// ── Waypoint marker ──────────────────────────────────────────────────────
+// Returns { center, radius, mesh, check, setSuccess }
+export function createWaypoint(x, y, z, color = 0x00e676, radius = 0.4) {
+  const geo  = new THREE.SphereGeometry(0.18, 14, 10);
+  const mat  = new THREE.MeshStandardMaterial({
+    color, emissive: color, emissiveIntensity: 0.6,
+    transparent: true, opacity: 0.85, roughness: 0.3
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
+
+  // Pulse ring around waypoint
+  const ringGeo = new THREE.TorusGeometry(0.32, 0.025, 8, 32);
+  const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 });
+  const ring    = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.set(x, y, z);
+  scene.add(ring);
+
+  setLevelObjects([...levelObjects, mesh, ring]);
+
+  const wp = {
+    center: new THREE.Vector3(x, y, z),
+    radius,
+    mesh,
+    ring,
+    ringMat,
+    _captured: false,
+    check() {
+      if (this._captured) return false;
+      return drone.pos.distanceTo(this.center) < this.radius;
+    },
+    setSuccess() {
+      mat.color.setHex(0x00ffcc);
+      mat.emissive.setHex(0x00ffcc);
+      ringMat.color.setHex(0x00ffcc);
+      this._captured = true;
+    },
+    reset() {
+      mat.color.setHex(color);
+      mat.emissive.setHex(color);
+      ringMat.color.setHex(color);
+      this._captured = false;
+    }
+  };
+  return wp;
+}
+
+// ── Ghost drone (formation marker) ──────────────────────────────────────
+// Returns { mesh, clearanceRadius }
+export function createGhostDrone(x, y, z) {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0x00e5ff, transparent: true, opacity: 0.35,
+    emissive: 0x00e5ff, emissiveIntensity: 0.3, roughness: 0.4
+  });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 0.04, 8), bodyMat);
+  group.add(body);
+
+  const armMat = new THREE.MeshStandardMaterial({ color: 0x0090aa, transparent: true, opacity: 0.3 });
+  [[ 0.115, 0,  0.115], [-0.115, 0,  0.115],
+   [ 0.115, 0, -0.115], [-0.115, 0, -0.115]].forEach(([ax, ay, az]) => {
+    const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.005, 12), armMat);
+    prop.position.set(ax, ay + 0.02, az);
+    group.add(prop);
+  });
+
+  group.position.set(x, y, z);
+  scene.add(group);
+  setLevelObjects([...levelObjects, group]);
+
+  return { mesh: group, center: new THREE.Vector3(x, y, z), clearanceRadius: 0.3 };
+}
+
+// ── Orbit-gate ring (n gates evenly spaced around a centre point) ────────
+// Returns array of gate objects
+export function createOrbitGates(cx, cy, cz, orbitRadius, count, gateSize = 1.2) {
+  const gates = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const gx = cx + Math.cos(angle) * orbitRadius;
+    const gz = cz + Math.sin(angle) * orbitRadius;
+    const rotY = angle + Math.PI / 2; // face tangentially
+    const gate = createFlightGate(gx, cy, gz, rotY, gateSize);
+    gates.push(gate);
+  }
+  return gates;
+}
+
+// ── Lit inspection tower ─────────────────────────────────────────────────
+// Returns the tower group
+export function createInspectionTower(x, z, height = 6.0) {
+  const group = new THREE.Group();
+
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x546e7a, roughness: 0.6, metalness: 0.3 });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, height, 12), bodyMat);
+  shaft.position.y = height / 2;
+  shaft.castShadow = true;
+  group.add(shaft);
+
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xffd54f, emissive: 0xffd54f, emissiveIntensity: 0.6, roughness: 0.4 });
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8), capMat);
+  cap.position.y = height + 0.3;
+  group.add(cap);
+
+  // Point light at top
+  const light = new THREE.PointLight(0xffd54f, 1.5, 12);
+  light.position.set(x, height + 0.3, z);
+  scene.add(light);
+
+  group.position.set(x, 0, z);
+  scene.add(group);
+
+  setLevelObjects([...levelObjects, group, light]);
+  return group;
+}
+
