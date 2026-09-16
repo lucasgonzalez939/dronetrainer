@@ -87,10 +87,16 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
     const newTimer = motorStartupTimer + dt;
     setMotorStartupTimer(newTimer);
     const ramp = Math.min(newTimer / 0.4, 1.0);
-    motorLights.forEach(l => { l.intensity = ramp * 0.6; });
+    motorLights.forEach(l => {
+      l.intensity = ramp * 0.6;
+      if (l._led) l._led.material.emissiveIntensity = ramp;
+    });
   } else {
     setMotorStartupTimer(0);
-    motorLights.forEach(l => { l.intensity = 0; });
+    motorLights.forEach(l => {
+      l.intensity = 0;
+      if (l._led) l._led.material.emissiveIntensity = 0;
+    });
   }
 
   const filterFactor = 1.0 - Math.exp(-CONFIG.INPUT_FILTER * dt);
