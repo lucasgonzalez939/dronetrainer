@@ -44,7 +44,7 @@ export function updateCompass(yawRad) {
   compassCtx.lineWidth = 1.25;
   compassCtx.stroke();
 
-  const cards = [['N', 0], ['E', Math.PI/2], ['S', Math.PI], ['O', -Math.PI/2]];
+  const cards = [['N', 0], ['E', Math.PI/2], ['S', Math.PI], ['W', -Math.PI/2]];
   cards.forEach(([label, angle]) => {
     const rel = angle - yawRad;
     const sx  = cx + Math.sin(rel) * r;
