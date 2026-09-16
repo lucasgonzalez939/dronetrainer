@@ -20,8 +20,8 @@ export const trailPositions = new Float32Array(24 * 3);
 export let trailGeo, trailMat, trailLine;
 export const trailHistory = [];
 export let altRing, altRingMat;
-export const WIND_PARTICLE_COUNT = 320;
-export const windParticlePositions = new Float32Array(320 * 3);
+export const WIND_PARTICLE_COUNT = 180;
+export const windParticlePositions = new Float32Array(180 * 3);
 export let windParticleGeo, windParticleMat, windParticles;
 
 // Drone mesh objects
@@ -50,11 +50,11 @@ export function initScene() {
   camera   = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
   // ── Renderer with cinematic colour grading ──────────────────────────────
-  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   // outputColorSpace is the current API (Three.js r152+); fall back to the
@@ -170,8 +170,8 @@ export function initScene() {
   const sun = new THREE.DirectionalLight(0xfff0cc, 1.1);
   sun.position.set(40, 60, 30);
   sun.castShadow = true;
-  sun.shadow.mapSize.width  = 2048;
-  sun.shadow.mapSize.height = 2048;
+  sun.shadow.mapSize.width  = 1024;
+  sun.shadow.mapSize.height = 1024;
   sun.shadow.camera.near  = 0.5;
   sun.shadow.camera.far   = 300;
   sun.shadow.camera.left  = -80;
@@ -263,7 +263,7 @@ export function initScene() {
   shadowDisc.position.y = 0.015;
   scene.add(shadowDisc);
 
-  const vpsBeamGeo = new THREE.CylinderGeometry(0.02, 0.25, 1.0, 16, 1, true);
+  const vpsBeamGeo = new THREE.CylinderGeometry(0.02, 0.22, 1.0, 10, 1, true);
   vpsBeamMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.15, wireframe: true, depthWrite: false });
   vpsBeam = new THREE.Mesh(vpsBeamGeo, vpsBeamMat);
   scene.add(vpsBeam);
@@ -298,8 +298,8 @@ export function initScene() {
   trailLine = new THREE.Line(trailGeo, trailMat);
   scene.add(trailLine);
 
-  altRingMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.4, depthWrite: false });
-  altRing    = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.008, 8, 48), altRingMat);
+  altRingMat = new THREE.MeshBasicMaterial({ color: 0x7fdfff, transparent: true, opacity: 0.18, depthWrite: false });
+  altRing    = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.006, 8, 32), altRingMat);
   scene.add(altRing);
 
   // ── Wind particles (larger count, varied sizes via scale) ─────────────────

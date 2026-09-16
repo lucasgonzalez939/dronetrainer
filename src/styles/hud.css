@@ -220,15 +220,14 @@
   margin-bottom: 2px;
 }
 #vps-warning {
-  color: #ff3d00;
+  color: #ffd180;
   font-weight: bold;
   display: none;
-  margin-top: 3px;
-  animation: blink 0.8s infinite;
-}
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
+  margin-top: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,193,7,0.38);
+  background: rgba(255,152,0,0.16);
 }
 
 /* Battery countdown bar */
@@ -351,6 +350,7 @@
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
+  opacity: 0.9;
 }
 #compass-canvas { display: block; }
 
@@ -370,7 +370,7 @@
 #wind-drift-canvas { display: block; }
 #wind-drift-label {
   font-size: 9px;
-  color: rgba(255,100,100,0.85);
+  color: rgba(255,193,7,0.88);
   font-weight: bold;
   letter-spacing: 0.5px;
 }
