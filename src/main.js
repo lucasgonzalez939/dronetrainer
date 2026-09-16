@@ -3,7 +3,7 @@
  * Initialises all modules, wires up events, and starts the game loop.
  */
 
-import { initScene } from './modules/scene.js';
+import { initScene, scene } from './modules/scene.js';
 import { initJoysticks } from './modules/joystick.js';
 import { initOverlayEvents, showLevelOverlay } from './modules/overlays.js';
 import { applySpeedPreset } from './modules/flightState.js';
@@ -11,14 +11,15 @@ import { setFlightState } from './modules/flightState.js';
 import { loadLevel } from './modules/levels.js';
 import { loadFreestyle, exitFreestyleMode, FREESTYLE_WIND_PRESETS } from './modules/freestyle.js';
 import {
-  FlightState, DIFFICULTY, JOY_CONFIG,
+  FlightState, DIFFICULTY, JOY_CONFIG, CONFIG,
   drone, isFreestyleMode,
   fsWindPreset, setFsWindPreset,
   windVector, setWindVector,
   isFPVMode, setIsFPVMode,
-  currentLevel
+  currentLevel,
+  setTimeOfDay, setFogDensity
 } from './modules/state.js';
-import { startLoop } from './modules/loop.js';
+import { startLoop, startReplay } from './modules/loop.js';
 
 // ── Initialise Three.js scene ──
 initScene();
@@ -103,6 +104,86 @@ cfgTurbStr.addEventListener('input', () => {
 // VPS toggle
 document.getElementById('cfg-vps-on').addEventListener('change', (e) => {
   DIFFICULTY.vpsOn = e.target.checked;
+});
+
+// ── Flight mode buttons ──
+document.querySelectorAll('[data-flightmode]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    CONFIG.FLIGHT_MODE = btn.dataset.flightmode;
+    document.querySelectorAll('[data-flightmode]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // reset angular rates when switching
+    drone.pitch = 0; drone.roll = 0;
+    drone.pitchRate = 0; drone.rollRate = 0;
+  });
+});
+
+// ── Time of day ──
+const cfgTimeOfDay    = document.getElementById('cfg-time-of-day');
+const cfgTimeOfDayVal = document.getElementById('cfg-time-of-day-val');
+cfgTimeOfDay.addEventListener('input', () => {
+  const v = +cfgTimeOfDay.value;
+  setTimeOfDay(v);
+  cfgTimeOfDayVal.textContent = v < 0.2 ? '🌙' : v < 0.45 ? '🌆' : v < 0.75 ? '🌅' : '☀️';
+  // Adjust ambient lighting on the scene
+  const ambient = scene.children.find(c => c.isAmbientLight);
+  if (ambient) ambient.intensity = 0.05 + v * 0.25;
+  const hemi = scene.children.find(c => c.isHemisphereLight);
+  if (hemi) hemi.intensity = 0.15 + v * 0.6;
+  const sun = scene.children.find(c => c.isDirectionalLight);
+  if (sun) sun.intensity = v * 1.2;
+  if (scene.fog) scene.fog.color.setHSL(0.08, 0.4, 0.1 + v * 0.65);
+});
+
+// ── Fog density ──
+const cfgFogDensity    = document.getElementById('cfg-fog-density');
+const cfgFogDensityVal = document.getElementById('cfg-fog-density-val');
+cfgFogDensity.addEventListener('input', () => {
+  const v = +cfgFogDensity.value;
+  setFogDensity(v);
+  cfgFogDensityVal.textContent = v.toFixed(3);
+  if (scene.fog) scene.fog.density = v;
+});
+
+// ── Expo curve preview canvas ──
+const expoCurveCanvas = document.getElementById('expo-curve-canvas');
+function drawExpoCurve() {
+  if (!expoCurveCanvas) return;
+  const ctx = expoCurveCanvas.getContext('2d');
+  const w = 160, h = 80, cx = w / 2, cy = h / 2;
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+  ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+  ctx.stroke();
+
+  // Curve
+  ctx.strokeStyle = '#ff9800';
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath();
+  const exp = JOY_CONFIG.exponent;
+  for (let i = 0; i <= w; i++) {
+    const nx = (i - cx) / cx;       // -1 to 1
+    const ny = Math.sign(nx) * Math.pow(Math.abs(nx), exp);
+    const px = i;
+    const py = cy - ny * (cy - 4);
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+drawExpoCurve();
+
+// Redraw when curve exponent changes
+document.getElementById('cfg-joy-curve').addEventListener('input', drawExpoCurve);
+
+// ── Replay button ──
+document.getElementById('btn-start-replay').addEventListener('click', () => {
+  document.getElementById('config-overlay').classList.remove('active');
+  startReplay();
 });
 
 // Joystick sliders

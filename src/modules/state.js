@@ -23,7 +23,10 @@ export const CONFIG = {
   ACCEL_DAMP:     3.5,
   NORMAL_DRAG:    2.5,
   VPS_FAIL_DRAG:  0.25,
-  TILT_FACTOR:    0.12
+  TILT_FACTOR:    0.12,
+  // Rate/Acro mode: 'attitude' (auto-level) | 'rate' (direct rate control)
+  FLIGHT_MODE:    'attitude',
+  MAX_RATE_SPEED: 4.0   // max angular rate deg/s in rate mode
 };
 
 export const SPEED_PRESETS = {
@@ -57,8 +60,14 @@ export const drone = {
   yawRate: 0,
   pitch: 0,
   roll: 0,
+  // Rate-mode angular rates (rad/s)
+  pitchRate: 0,
+  rollRate: 0,
   targetHoverAlt: 1.0,
-  vpsActive: true
+  vpsActive: true,
+  // Motor RPM model (second-order spool)
+  motorRpm: [0, 0, 0, 0],       // normalised 0–1
+  motorRpmVel: [0, 0, 0, 0]     // first derivative
 };
 
 export const rawInput      = { throttle:0, yaw:0, pitch:0, roll:0 };
@@ -95,6 +104,46 @@ export let fsWindPreset     = 'calm';
 
 // Camera
 export let isFPVMode = false;
+
+// ── Wind gust burst (emergency scenario) ──────────────────────────────────
+export let gustBurstActive    = false;
+export let gustBurstTimer     = 0;
+export let gustBurstDuration  = 3;
+export let gustBurstMult      = 3.0;
+export function setGustBurstActive(v)   { gustBurstActive   = v; }
+export function setGustBurstTimer(v)    { gustBurstTimer    = v; }
+export function setGustBurstDuration(v) { gustBurstDuration = v; }
+export function setGustBurstMult(v)     { gustBurstMult     = v; }
+
+// ── Moving obstacles list (beyond the single movingGate) ──────────────────
+export let movingObstacles = [];
+export function setMovingObstacles(v) { movingObstacles = v; }
+
+// ── Level-best times (timed levels) ───────────────────────────────────────
+export let levelBestTimes = {};
+export function setLevelBestTime(idx, t) { levelBestTimes[idx] = t; }
+
+// ── Score / star system ───────────────────────────────────────────────────
+export let gateScores    = [];   // per-gate score objects { accuracy, speed, time }
+export let levelStars    = 0;    // 0-3 stars for current attempt
+export let hintRetries   = {};   // { missionIdx: retryCount }
+export function setGateScores(v)  { gateScores = v; }
+export function setLevelStars(v)  { levelStars = v; }
+export function setHintRetries(v) { hintRetries = v; }
+
+// ── Flight path replay ────────────────────────────────────────────────────
+export let replayBuffer  = [];    // array of {x,y,z} sampled during flight
+export let replaySample  = 0;     // sample interval accumulator
+export function setReplayBuffer(v) { replayBuffer = v; }
+export function setReplaySample(v) { replaySample = v; }
+
+// ── Time-of-day ───────────────────────────────────────────────────────────
+export let timeOfDay = 0.5;  // 0 = night, 0.5 = golden hour, 1 = day
+export function setTimeOfDay(v) { timeOfDay = v; }
+
+// ── Fog density ───────────────────────────────────────────────────────────
+export let fogDensity = 0.008;
+export function setFogDensity(v) { fogDensity = v; }
 
 // Setters (needed because ES module bindings are live but not assignable from outside)
 export function setLevelObjects(v)    { levelObjects    = v; }

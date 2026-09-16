@@ -1,5 +1,5 @@
 /**
- * joystick.js – VirtualJoystick class and stick instantiation.
+ * joystick.js – VirtualJoystick class, keyboard and gamepad input.
  */
 
 import { rawInput, JOY_CONFIG } from './state.js';
@@ -55,7 +55,83 @@ export class VirtualJoystick {
   }
 }
 
+// ── Keyboard input state ──────────────────────────────────────────────────
+const keysDown = new Set();
+
+const KEY_MAP = {
+  // Left stick (throttle + yaw)
+  'ArrowUp':    () => { rawInput.throttle =  1; },
+  'ArrowDown':  () => { rawInput.throttle = -1; },
+  'ArrowLeft':  () => { rawInput.yaw      = -1; },
+  'ArrowRight': () => { rawInput.yaw      =  1; },
+  // Right stick (pitch + roll)
+  'KeyW': () => { rawInput.pitch = -1; },
+  'KeyS': () => { rawInput.pitch =  1; },
+  'KeyA': () => { rawInput.roll  = -1; },
+  'KeyD': () => { rawInput.roll  =  1; },
+};
+
+function applyKeyboard() {
+  // Reset axes that are controlled by keyboard
+  let kThrottle = 0, kYaw = 0, kPitch = 0, kRoll = 0;
+  if (keysDown.has('ArrowUp'))    kThrottle =  1;
+  if (keysDown.has('ArrowDown'))  kThrottle = -1;
+  if (keysDown.has('ArrowLeft'))  kYaw      = -1;
+  if (keysDown.has('ArrowRight')) kYaw      =  1;
+  if (keysDown.has('KeyW'))       kPitch    = -1;
+  if (keysDown.has('KeyS'))       kPitch    =  1;
+  if (keysDown.has('KeyA'))       kRoll     = -1;
+  if (keysDown.has('KeyD'))       kRoll     =  1;
+
+  if (kThrottle) rawInput.throttle = kThrottle * JOY_CONFIG.sensitivity;
+  if (kYaw)      rawInput.yaw      = kYaw      * JOY_CONFIG.sensitivity;
+  if (kPitch)    rawInput.pitch    = kPitch    * JOY_CONFIG.sensitivity;
+  if (kRoll)     rawInput.roll     = kRoll     * JOY_CONFIG.sensitivity;
+}
+
+function clearKeyAxis() {
+  // Only zero out if no keys for that axis are held
+  if (!keysDown.has('ArrowUp') && !keysDown.has('ArrowDown'))   rawInput.throttle = 0;
+  if (!keysDown.has('ArrowLeft') && !keysDown.has('ArrowRight')) rawInput.yaw      = 0;
+  if (!keysDown.has('KeyW') && !keysDown.has('KeyS'))            rawInput.pitch    = 0;
+  if (!keysDown.has('KeyA') && !keysDown.has('KeyD'))            rawInput.roll     = 0;
+}
+
+// ── Gamepad polling ───────────────────────────────────────────────────────
+// Standard gamepad mapping (Xbox layout):
+//   Axis 0/1 = Left stick X/Y  → yaw + throttle
+//   Axis 2/3 = Right stick X/Y → roll + pitch
+const GP_DEADZONE = 0.12;
+
+function pollGamepad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (const pad of pads) {
+    if (!pad) continue;
+    const ax = (v) => Math.abs(v) < GP_DEADZONE ? 0 : v;
+    rawInput.yaw      = ax(pad.axes[0]) * JOY_CONFIG.sensitivity;
+    rawInput.throttle = -ax(pad.axes[1]) * JOY_CONFIG.sensitivity;
+    rawInput.roll     = ax(pad.axes[2]) * JOY_CONFIG.sensitivity;
+    rawInput.pitch    = ax(pad.axes[3]) * JOY_CONFIG.sensitivity;
+    return; // use first connected pad
+  }
+}
+
 export function initJoysticks() {
   new VirtualJoystick('left-zone',  'left-knob',  (x,y) => { rawInput.yaw=x;  rawInput.throttle=-y; });
   new VirtualJoystick('right-zone', 'right-knob', (x,y) => { rawInput.roll=x; rawInput.pitch=-y; });
+
+  // Keyboard
+  window.addEventListener('keydown', (e) => {
+    if (keysDown.has(e.code)) return;
+    keysDown.add(e.code);
+    applyKeyboard();
+  });
+  window.addEventListener('keyup', (e) => {
+    keysDown.delete(e.code);
+    clearKeyAxis();
+    applyKeyboard();
+  });
+
+  // Gamepad polling – hooked into animation via setInterval (lightweight)
+  setInterval(pollGamepad, 16);
 }

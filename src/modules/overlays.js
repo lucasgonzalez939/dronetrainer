@@ -2,7 +2,7 @@
  * overlays.js – Level intro overlay, level progress panel, overlay open/close.
  */
 
-import { currentLevel, setCurrentLevel } from './state.js';
+import { currentLevel, setCurrentLevel, levelBestTimes, levelStars } from './state.js';
 import { LEVEL_DEFS, loadLevel } from './levels.js';
 import { loadProgress, resetProgress } from './progress.js';
 import { loadFreestyle } from './freestyle.js';
@@ -33,7 +33,23 @@ export function showLevelOverlay(idx, isTransition) {
   ovLevelTitle.textContent = def.name;
   ovSubtitle.textContent   = def.subtitle;
   ovDesc.textContent       = def.desc;
-  ovObjectives.innerHTML   = def.objectives.map(o => `<li>${o}</li>`).join('');
+
+  let objectivesHtml = def.objectives.map(o => `<li>${o}</li>`).join('');
+
+  // Show medal times if defined
+  if (def.medalTimes) {
+    const { gold, silver, bronze } = def.medalTimes;
+    objectivesHtml += `<li style="color:#ffd700">🥇 Oro: &lt;${gold}s &nbsp; 🥈 Plata: &lt;${silver}s &nbsp; 🥉 Bronce: &lt;${bronze}s</li>`;
+  }
+
+  // Show best time if recorded
+  if (levelBestTimes[idx] !== undefined) {
+    const best = levelBestTimes[idx].toFixed(1);
+    const stars = '⭐'.repeat(levelStars) + '☆'.repeat(3 - levelStars);
+    objectivesHtml += `<li style="color:#00e5ff">⏱ Mejor tiempo: ${best}s &nbsp; ${stars}</li>`;
+  }
+
+  ovObjectives.innerHTML   = objectivesHtml;
   btnStartLevel.textContent = isTransition ? '▶ EMPEZAR NIVEL' : 'COMENZAR';
   btnPrevLevel.style.display  = (idx > 0) ? 'inline-block' : 'none';
   btnFreestyle.style.display  = 'none';
