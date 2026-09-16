@@ -58,19 +58,6 @@ export class VirtualJoystick {
 // ── Keyboard input state ──────────────────────────────────────────────────
 const keysDown = new Set();
 
-const KEY_MAP = {
-  // Left stick (throttle + yaw)
-  'ArrowUp':    () => { rawInput.throttle =  1; },
-  'ArrowDown':  () => { rawInput.throttle = -1; },
-  'ArrowLeft':  () => { rawInput.yaw      = -1; },
-  'ArrowRight': () => { rawInput.yaw      =  1; },
-  // Right stick (pitch + roll)
-  'KeyW': () => { rawInput.pitch = -1; },
-  'KeyS': () => { rawInput.pitch =  1; },
-  'KeyA': () => { rawInput.roll  = -1; },
-  'KeyD': () => { rawInput.roll  =  1; },
-};
-
 function applyKeyboard() {
   // Reset axes that are controlled by keyboard
   let kThrottle = 0, kYaw = 0, kPitch = 0, kRoll = 0;

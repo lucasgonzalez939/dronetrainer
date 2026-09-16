@@ -104,7 +104,6 @@ function _showHint(missionIdx, forceIfThreshold) {
   if (!m || !m.hint) { missionHintEl.style.display = 'none'; return; }
   const retries = hintRetries[missionIdx] || 0;
   if (forceIfThreshold && retries < 3) { missionHintEl.style.display = 'none'; return; }
-  if (!forceIfThreshold) { missionHintEl.style.display = 'none'; return; }
   missionHintEl.textContent = '💡 ' + m.hint;
   missionHintEl.style.display = 'block';
 }

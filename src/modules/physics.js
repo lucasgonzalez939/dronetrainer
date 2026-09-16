@@ -46,7 +46,7 @@ function getWindShearMult(alt) {
   for (const band of WIND_SHEAR_BANDS) {
     if (alt < band.maxAlt) return band.mult;
   }
-  return 1.0;
+  return 1.0; // fallback (unreachable with Infinity band, but kept for safety)
 }
 
 export function checkAndResolveCollisions() {
