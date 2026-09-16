@@ -40,7 +40,7 @@ function seededRand(seed) {
   let s = seed;
   return function() {
     s = (s * 1664525 + 1013904223) & 0xffffffff;
-    return (s >>> 0) / 0xffffffff;
+    return (s >>> 0) / 0x100000000;
   };
 }
 
@@ -57,7 +57,13 @@ export function initScene() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  // outputColorSpace is the current API (Three.js r152+); fall back to the
+  // legacy outputEncoding for older builds (r128 used here via CDN).
+  if (THREE.SRGBColorSpace !== undefined) {
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+  } else {
+    renderer.outputEncoding = THREE.sRGBEncoding; // eslint-disable-line
+  }
   container.appendChild(renderer.domElement);
 
   // ── Atmospheric fog ─────────────────────────────────────────────────────
@@ -343,7 +349,9 @@ function _buildEnvironment() {
     do {
       tx = (rand() - 0.5) * 90;
       tz = (rand() - 0.5) * 90;
-    } while (Math.abs(tx) < 8 && Math.abs(tz) < 8 && tz > -30 && tz < 5);
+    // Reject if inside the drone start zone OR inside the flight path corridor
+    } while ((Math.abs(tx) < 8 && Math.abs(tz) < 8) ||
+             (Math.abs(tx) < 8 && tz > -30 && tz < 5));
 
     const treeH   = 2.5 + rand() * 3.5;
     const trunkH  = treeH * 0.45;
