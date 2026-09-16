@@ -1,0 +1,407 @@
+/* ── TOP HUD BAR ── */
+#top-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.55);
+  padding: 0 12px;
+  pointer-events: auto;
+}
+
+/* Left icon group */
+.top-icons-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.top-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.75);
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+.top-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.top-icon-btn:active { opacity: 0.7; }
+
+/* Center status strip */
+#top-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #fff;
+  font-family: 'Arial', sans-serif;
+}
+#status-battery {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bat-icon {
+  width: 22px;
+  height: 12px;
+  border: 1.5px solid #e53935;
+  border-radius: 2px;
+  position: relative;
+  display: inline-block;
+}
+.bat-icon::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 2px;
+  width: 3px;
+  height: 6px;
+  background: #e53935;
+  border-radius: 0 1px 1px 0;
+}
+.bat-fill {
+  height: 100%;
+  background: #e53935;
+  border-radius: 1px;
+  transition: width 0.4s;
+}
+#status-wifi svg, #status-bt svg { width:18px; height:18px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+#status-sep { color: rgba(255,255,255,0.3); font-size: 18px; font-weight: 100; }
+#status-speed { color: #ff4444; font-weight: bold; letter-spacing: 0.5px; }
+#status-alt   { color: #fff; letter-spacing: 0.5px; }
+
+/* Right icon group */
+.top-icons-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Takeoff / Land button */
+#btn-takeoff {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.85);
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+#btn-takeoff svg { width:22px; height:22px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+#btn-takeoff:disabled { opacity: 0.4; cursor: not-allowed; }
+#btn-takeoff.state-fly  { border-color: #4caf50; }
+#btn-takeoff.state-fly svg { stroke: #4caf50; }
+#btn-takeoff.state-land { border-color: #ff9800; }
+#btn-takeoff.state-land svg { stroke: #ff9800; }
+#btn-takeoff.state-crash { border-color: #e53935; }
+#btn-takeoff.state-crash svg { stroke: #e53935; }
+
+/* Level progress menu button */
+#btn-levels {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.85);
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+#btn-levels svg { width:22px; height:22px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+#btn-levels:active { opacity: 0.7; }
+
+/* Camera view toggle button */
+#btn-cam-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: border-color 0.2s, opacity 0.2s;
+}
+#btn-cam-toggle svg { width:20px; height:20px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+#btn-cam-toggle.fpv-active { border-color: #00e5ff; }
+#btn-cam-toggle.fpv-active svg { stroke: #00e5ff; }
+#btn-cam-toggle:active { opacity: 0.7; }
+
+/* Video / Photo placeholder buttons */
+.top-media-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: auto;
+  cursor: default;
+  opacity: 0.55;
+}
+.top-media-btn svg { width:20px; height:20px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+/* Record/photo button */
+#btn-record {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: auto;
+  cursor: default;
+  opacity: 0.55;
+}
+#btn-record-inner {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+}
+
+/* Mission HUD – centred below top bar */
+#mission-hud {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  min-width: 280px;
+  color: #fff;
+  background: rgba(0,0,0,0.45);
+  padding: 5px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.mission-title {
+  color: #ffca28;
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+#vps-warning {
+  color: #ff3d00;
+  font-weight: bold;
+  display: none;
+  margin-top: 3px;
+  animation: blink 0.8s infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* Battery countdown bar */
+#battery-bar-wrap {
+  display: none;
+  position: absolute;
+  top: 62px;
+  right: 12px;
+  width: 120px;
+  background: rgba(0,0,0,0.45);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #ff9800;
+  pointer-events: none;
+}
+#battery-bar-label { margin-bottom: 2px; font-weight: bold; }
+#battery-bar-track {
+  height: 6px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+#battery-bar-fill {
+  height: 100%;
+  background: #ff9800;
+  border-radius: 3px;
+  transition: width 0.5s, background 0.5s;
+}
+
+/* Freestyle HUD */
+#freestyle-hud {
+  display: none;
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  min-width: 240px;
+  color: #fff;
+  background: rgba(0,0,0,0.45);
+  padding: 5px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+#freestyle-hud .fs-title {
+  color: #80cbc4;
+  font-weight: bold;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 3px;
+}
+#freestyle-hud .fs-score {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffd54f;
+}
+
+/* ── SPEED TAPE ── */
+#speed-tape {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+}
+#speed-tape-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.5px;
+  font-weight: bold;
+}
+#speed-tape-track {
+  width: 10px;
+  height: 80px;
+  background: rgba(255,255,255,0.10);
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+#speed-tape-fill {
+  width: 100%;
+  border-radius: 5px;
+  transition: height 0.1s, background 0.2s;
+  background: #4caf50;
+}
+#speed-tape-val {
+  font-size: 11px;
+  font-weight: bold;
+  color: #fff;
+}
+#speed-tape-unit {
+  font-size: 8px;
+  color: rgba(255,255,255,0.45);
+}
+
+/* ── ARTIFICIAL HORIZON ── */
+#horizon-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 230px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+#horizon-canvas {
+  display: block;
+}
+
+/* ── COMPASS ROSE ── */
+#compass-hud {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+#compass-canvas { display: block; }
+
+/* ── WIND DRIFT ARROW ── */
+#wind-drift-hud {
+  display: none;
+  position: absolute;
+  right: 56px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+#wind-drift-hud.active { display: flex; }
+#wind-drift-canvas { display: block; }
+#wind-drift-label {
+  font-size: 9px;
+  color: rgba(255,100,100,0.85);
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+/* ── INPUT VISUALIZER (mini joystick dots) ── */
+#input-viz {
+  position: absolute;
+  bottom: 225px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+.input-viz-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.25);
+  position: relative;
+  flex-shrink: 0;
+}
+.input-viz-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00e5ff;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: top 0.05s, left 0.05s;
+}
