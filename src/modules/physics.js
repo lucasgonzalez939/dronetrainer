@@ -234,16 +234,19 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
 
         // No clamp – allow full 360° flips in acro mode
 
-        // Thrust along drone body axis (accounts for full orientation)
-        // Use proper rotation: thrust direction is always "up" in body frame
+        // Thrust along drone body axis (accounts for full orientation).
+        // Body "up" rotated by pitch then roll into world frame:
+        //   x = -sin(roll)*cos(pitch), y = cos(pitch)*cos(roll), z = -sin(pitch)
         const thrustWorld = new THREE.Vector3(
-          Math.sin(drone.roll) * Math.cos(drone.pitch),
+          -Math.sin(drone.roll) * Math.cos(drone.pitch),
           Math.cos(drone.pitch) * Math.cos(drone.roll),
           -Math.sin(drone.pitch)
         );
-        // throttle: -1 to 1; scale to meaningful thrust
+        // throttleNorm maps [-1,1] → [0,1]; THRUST_SCALE doubles back to match
+        // the effective range of the original formula (CONFIG.MAX_VERT_SPEED * 2)
+        const THRUST_SCALE_FACTOR = 4.0;
         const throttleNorm = (filteredInput.throttle + 1) * 0.5; // 0 to 1
-        const thrustScale = CONFIG.MAX_VERT_SPEED * 4.0 * throttleNorm * avgRpm;
+        const thrustScale = CONFIG.MAX_VERT_SPEED * THRUST_SCALE_FACTOR * throttleNorm * avgRpm;
         drone.vel.addScaledVector(thrustWorld, thrustScale * dt);
 
         // Gravity
