@@ -232,17 +232,21 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
         drone.pitch += drone.pitchRate * dt;
         drone.roll  += drone.rollRate  * dt;
 
-        // Clamp pitch/roll to ±π/2 in rate mode (allow flips theoretically)
-        drone.pitch = Math.max(-Math.PI * 0.45, Math.min(Math.PI * 0.45, drone.pitch));
-        drone.roll  = Math.max(-Math.PI * 0.45, Math.min(Math.PI * 0.45, drone.roll));
+        // No clamp – allow full 360° flips in acro mode
 
-        // Thrust along drone body axis, projected to world
+        // Thrust along drone body axis (accounts for full orientation).
+        // Body "up" rotated by pitch then roll into world frame:
+        //   x = -sin(roll)*cos(pitch), y = cos(pitch)*cos(roll), z = -sin(pitch)
         const thrustWorld = new THREE.Vector3(
-          -Math.sin(drone.roll) * avgRpm,
-          Math.cos(drone.pitch) * Math.cos(drone.roll) * avgRpm,
-          -Math.sin(drone.pitch) * avgRpm
+          -Math.sin(drone.roll) * Math.cos(drone.pitch),
+          Math.cos(drone.pitch) * Math.cos(drone.roll),
+          -Math.sin(drone.pitch)
         );
-        const thrustScale = CONFIG.MAX_VERT_SPEED * 2.0 * filteredInput.throttle;
+        // throttleNorm maps [-1,1] → [0,1]; THRUST_SCALE doubles back to match
+        // the effective range of the original formula (CONFIG.MAX_VERT_SPEED * 2)
+        const THRUST_SCALE_FACTOR = 4.0;
+        const throttleNorm = (filteredInput.throttle + 1) * 0.5; // 0 to 1
+        const thrustScale = CONFIG.MAX_VERT_SPEED * THRUST_SCALE_FACTOR * throttleNorm * avgRpm;
         drone.vel.addScaledVector(thrustWorld, thrustScale * dt);
 
         // Gravity
@@ -315,7 +319,14 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
 
       drone.pos.addScaledVector(drone.vel, dt);
 
-      if (drone.pos.y < 0.08) { drone.pos.y = 0.08; drone.vel.y = 0; }
+      if (drone.pos.y < 0.08) {
+        if (isRateMode && drone.vel.y < -1.5) {
+          // Hard ground impact in acro mode → crash
+          setFlightState(FlightState.CRASHED);
+          return;
+        }
+        drone.pos.y = 0.08; drone.vel.y = 0;
+      }
       break;
     }
   }

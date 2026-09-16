@@ -185,7 +185,16 @@
       <!-- Keyboard hint -->
       <div class="cfg-section" style="font-size:9px;color:rgba(255,255,255,0.3);line-height:1.7;">
         <div class="cfg-section-title">TECLADO / GAMEPAD</div>
-        ↑↓ Subir/Bajar &nbsp; ←→ Girar &nbsp; WASD Pitch/Roll<br>
+        <div class="cfg-toggle-row" style="margin-bottom:6px;">
+          <div>
+            <div class="cfg-toggle-label" style="font-size:10px;">🎮 Intercambiar teclado</div>
+            <div class="cfg-toggle-sub" id="kbd-swap-hint">↑↓ Subir/Bajar · ←→ Girar · WASD Pitch/Roll</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-kbd-swap">
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
         Gamepad: Stick izq. Throttle+Yaw &nbsp; Stick der. Pitch+Roll
       </div>
 

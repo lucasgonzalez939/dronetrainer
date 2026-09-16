@@ -206,6 +206,16 @@ cfgJoyDead.addEventListener('input', () => {
   cfgJoyDeadVal.textContent = Math.round(cfgJoyDead.value * 100) + '%';
 });
 
+// ── Keyboard swap toggle ──
+const cfgKbdSwap   = document.getElementById('cfg-kbd-swap');
+const kbdSwapHint  = document.getElementById('kbd-swap-hint');
+const KBD_HINT_DEFAULT = '↑↓ Subir/Bajar · ←→ Girar · WASD Pitch/Roll';
+const KBD_HINT_SWAPPED = 'WS Subir/Bajar · AD Girar · ↑↓←→ Pitch/Roll';
+cfgKbdSwap.addEventListener('change', () => {
+  JOY_CONFIG.swapKeyboard = cfgKbdSwap.checked;
+  kbdSwapHint.textContent = cfgKbdSwap.checked ? KBD_HINT_SWAPPED : KBD_HINT_DEFAULT;
+});
+
 // ── FPV camera toggle ──
 const fpvOverlay   = document.getElementById('fpv-overlay');
 const btnCamToggle = document.getElementById('btn-cam-toggle');

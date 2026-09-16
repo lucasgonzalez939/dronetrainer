@@ -48,7 +48,10 @@ export const DIFFICULTY = {
 export const JOY_CONFIG = {
   sensitivity: 1.0,
   exponent:    3.0,
-  deadzone:    0.05
+  deadzone:    0.05,
+  // false = arrows→throttle/yaw + WASD→pitch/roll (default)
+  // true  = WASD→throttle/yaw  + arrows→pitch/roll
+  swapKeyboard: false
 };
 
 export const drone = {

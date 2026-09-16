@@ -61,14 +61,28 @@ const keysDown = new Set();
 function applyKeyboard() {
   // Reset axes that are controlled by keyboard
   let kThrottle = 0, kYaw = 0, kPitch = 0, kRoll = 0;
-  if (keysDown.has('ArrowUp'))    kThrottle =  1;
-  if (keysDown.has('ArrowDown'))  kThrottle = -1;
-  if (keysDown.has('ArrowLeft'))  kYaw      = -1;
-  if (keysDown.has('ArrowRight')) kYaw      =  1;
-  if (keysDown.has('KeyW'))       kPitch    = -1;
-  if (keysDown.has('KeyS'))       kPitch    =  1;
-  if (keysDown.has('KeyA'))       kRoll     = -1;
-  if (keysDown.has('KeyD'))       kRoll     =  1;
+
+  if (JOY_CONFIG.swapKeyboard) {
+    // Swapped: WASD → throttle/yaw  |  arrows → pitch/roll
+    if (keysDown.has('KeyW'))        kThrottle =  1;
+    if (keysDown.has('KeyS'))        kThrottle = -1;
+    if (keysDown.has('KeyA'))        kYaw      = -1;
+    if (keysDown.has('KeyD'))        kYaw      =  1;
+    if (keysDown.has('ArrowUp'))     kPitch    = -1;
+    if (keysDown.has('ArrowDown'))   kPitch    =  1;
+    if (keysDown.has('ArrowLeft'))   kRoll     = -1;
+    if (keysDown.has('ArrowRight'))  kRoll     =  1;
+  } else {
+    // Default: arrows → throttle/yaw  |  WASD → pitch/roll
+    if (keysDown.has('ArrowUp'))    kThrottle =  1;
+    if (keysDown.has('ArrowDown'))  kThrottle = -1;
+    if (keysDown.has('ArrowLeft'))  kYaw      = -1;
+    if (keysDown.has('ArrowRight')) kYaw      =  1;
+    if (keysDown.has('KeyW'))       kPitch    = -1;
+    if (keysDown.has('KeyS'))       kPitch    =  1;
+    if (keysDown.has('KeyA'))       kRoll     = -1;
+    if (keysDown.has('KeyD'))       kRoll     =  1;
+  }
 
   if (kThrottle) rawInput.throttle = kThrottle * JOY_CONFIG.sensitivity;
   if (kYaw)      rawInput.yaw      = kYaw      * JOY_CONFIG.sensitivity;
@@ -78,10 +92,17 @@ function applyKeyboard() {
 
 function clearKeyAxis() {
   // Only zero out if no keys for that axis are held
-  if (!keysDown.has('ArrowUp') && !keysDown.has('ArrowDown'))   rawInput.throttle = 0;
-  if (!keysDown.has('ArrowLeft') && !keysDown.has('ArrowRight')) rawInput.yaw      = 0;
-  if (!keysDown.has('KeyW') && !keysDown.has('KeyS'))            rawInput.pitch    = 0;
-  if (!keysDown.has('KeyA') && !keysDown.has('KeyD'))            rawInput.roll     = 0;
+  if (JOY_CONFIG.swapKeyboard) {
+    if (!keysDown.has('KeyW') && !keysDown.has('KeyS'))            rawInput.throttle = 0;
+    if (!keysDown.has('KeyA') && !keysDown.has('KeyD'))            rawInput.yaw      = 0;
+    if (!keysDown.has('ArrowUp') && !keysDown.has('ArrowDown'))   rawInput.pitch    = 0;
+    if (!keysDown.has('ArrowLeft') && !keysDown.has('ArrowRight')) rawInput.roll     = 0;
+  } else {
+    if (!keysDown.has('ArrowUp') && !keysDown.has('ArrowDown'))   rawInput.throttle = 0;
+    if (!keysDown.has('ArrowLeft') && !keysDown.has('ArrowRight')) rawInput.yaw      = 0;
+    if (!keysDown.has('KeyW') && !keysDown.has('KeyS'))            rawInput.pitch    = 0;
+    if (!keysDown.has('KeyA') && !keysDown.has('KeyD'))            rawInput.roll     = 0;
+  }
 }
 
 // ── Gamepad polling ───────────────────────────────────────────────────────
