@@ -24,6 +24,7 @@ const fpvOverlay = document.getElementById('fpv-overlay');
 const propBlades = fpvOverlay.querySelectorAll('.fpv-prop-blade');
 const statusSpeed = document.getElementById('status-speed');
 const statusAlt   = document.getElementById('status-alt');
+// 20 Hz HUD refresh keeps overlays responsive while cutting per-frame canvas work.
 const HUD_STEP = 1 / 20;
 let hudTimer = 0;
 let lastStatusSpeed = '';
@@ -42,7 +43,7 @@ export function startLoop() {
       const newTime = batteryTimeLeft - dt;
       setBatteryTimeLeft(Math.max(0, newTime));
       updateBatteryBar(newTime, DIFFICULTY.batteryTime);
-      if (batteryTimeLeft <= 0 && !batteryDepleted) {
+      if (newTime <= 0 && !batteryDepleted) {
         setBatteryDepleted(true);
         setFlightState(FlightState.LANDING);
       }
