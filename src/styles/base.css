@@ -84,14 +84,9 @@ body, html {
   inset: 0;
   pointer-events: none;
   z-index: 4;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(229,57,53,0.0) 60%, rgba(229,57,53,0.55) 100%);
-  animation: vpsPulse 0.7s ease-in-out infinite alternate;
+  background: radial-gradient(ellipse at center, transparent 52%, rgba(255,179,0,0.0) 72%, rgba(255,179,0,0.12) 100%);
 }
 #vps-vignette.active { display: block; }
-@keyframes vpsPulse {
-  from { opacity: 0.3; }
-  to   { opacity: 1.0; }
-}
 
 /* ── LEVEL TRANSITION FADE ── */
 #level-fade {

@@ -262,7 +262,8 @@ export function updateVisualAids(dt, elapsedTime) {
     vpsBeam.visible = true;
     vpsBeam.position.set(drone.pos.x, alt/2, drone.pos.z);
     vpsBeam.scale.set(1.0, alt, 1.0);
-    vpsBeamMat.color.setHex(drone.vpsActive ? 0x00e5ff : 0xff3d00);
+    vpsBeamMat.color.setHex(drone.vpsActive ? 0x00e5ff : 0xffb300);
+    vpsBeamMat.opacity = drone.vpsActive ? 0.12 : 0.09;
   } else {
     vpsBeam.visible = false;
   }
@@ -318,10 +319,10 @@ export function updateVisualAids(dt, elapsedTime) {
     pg.rotation.y += propSpeed * (i % 2 === 0 ? 1 : -1) * dt;
   });
 
-  altRing.position.set(drone.pos.x, drone.pos.y, drone.pos.z);
-  const ringRadius = 0.3 + alt * 0.45;
+  altRing.position.set(drone.pos.x, 0.028, drone.pos.z);
+  const ringRadius = 0.35 + Math.min(alt, 6) * 0.18;
   altRing.scale.setScalar(ringRadius / 0.5);
-  altRingMat.opacity = Math.max(0.1, 0.45 - alt * 0.04);
+  altRingMat.opacity = Math.min(0.22, 0.07 + alt * 0.025);
   altRing.visible = (drone.state !== FlightState.LANDED);
 
   if (DIFFICULTY.windOn && elapsedTime !== undefined) {

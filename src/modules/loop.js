@@ -21,7 +21,14 @@ import { setFlightState } from './flightState.js';
 
 const clock      = new THREE.Clock();
 const fpvOverlay = document.getElementById('fpv-overlay');
-const vpsVignette= document.getElementById('vps-vignette');
+const propBlades = fpvOverlay.querySelectorAll('.fpv-prop-blade');
+const statusSpeed = document.getElementById('status-speed');
+const statusAlt   = document.getElementById('status-alt');
+const HUD_STEP = 1 / 20;
+let hudTimer = 0;
+let lastStatusSpeed = '';
+let lastStatusAlt = '';
+let lastAirborne = null;
 
 export function startLoop() {
   function loop() {
@@ -34,7 +41,7 @@ export function startLoop() {
         (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF)) {
       const newTime = batteryTimeLeft - dt;
       setBatteryTimeLeft(Math.max(0, newTime));
-      updateBatteryBar(batteryTimeLeft, DIFFICULTY.batteryTime);
+      updateBatteryBar(newTime, DIFFICULTY.batteryTime);
       if (batteryTimeLeft <= 0 && !batteryDepleted) {
         setBatteryDepleted(true);
         setFlightState(FlightState.LANDING);
@@ -56,28 +63,37 @@ export function startLoop() {
 
     renderer.render(scene, camera);
 
-    // Top-bar status
-    const speed = Math.hypot(drone.vel.x, drone.vel.z);
-    const statusSpeed = document.getElementById('status-speed');
-    const statusAlt   = document.getElementById('status-alt');
-    if (statusSpeed) statusSpeed.textContent = `HS ${speed.toFixed(1)}m/s`;
-    if (statusAlt)   statusAlt.textContent   = `H ${drone.pos.y.toFixed(1)}m`;
-
     // FPV propeller animation
-    const propBlades = fpvOverlay.querySelectorAll('.fpv-prop-blade');
     const isAirborne = drone.state !== FlightState.LANDED;
-    propBlades.forEach(b => { b.style.animationPlayState = isAirborne ? 'running' : 'paused'; });
+    if (isAirborne !== lastAirborne) {
+      propBlades.forEach(b => { b.style.animationPlayState = isAirborne ? 'running' : 'paused'; });
+      lastAirborne = isAirborne;
+    }
 
     // HUD updates
-    updateSpeedTape(speed);
-    updateCompass(drone.yaw);
-    updateHorizon(drone.pitch, drone.roll);
-    updateDriftIndicator(!drone.vpsActive);
-    updateInputViz();
+    hudTimer += dt;
+    if (hudTimer >= HUD_STEP) {
+      hudTimer -= HUD_STEP;
+      const speed = Math.hypot(drone.vel.x, drone.vel.z);
+      const nextStatusSpeed = `HS ${speed.toFixed(1)}m/s`;
+      const nextStatusAlt   = `ALT ${drone.pos.y.toFixed(1)}m`;
+      if (statusSpeed && nextStatusSpeed !== lastStatusSpeed) {
+        statusSpeed.textContent = nextStatusSpeed;
+        lastStatusSpeed = nextStatusSpeed;
+      }
+      if (statusAlt && nextStatusAlt !== lastStatusAlt) {
+        statusAlt.textContent = nextStatusAlt;
+        lastStatusAlt = nextStatusAlt;
+      }
+      updateSpeedTape(speed);
+      updateCompass(drone.yaw);
+      updateHorizon(drone.pitch, drone.roll);
+      updateDriftIndicator(!drone.vpsActive);
+      updateInputViz();
+    }
 
-    // VPS vignette + slick zone pulse
+    // Slick zone pulse
     if (!drone.vpsActive) {
-      vpsVignette.classList.add('active');
       const pulse = 0.5 + 0.5 * Math.sin(elapsedTime * 8);
       levelSlickZones.forEach(sz => {
         if (sz.mesh && sz.mesh.material) {
@@ -85,7 +101,6 @@ export function startLoop() {
         }
       });
     } else {
-      vpsVignette.classList.remove('active');
       levelSlickZones.forEach(sz => {
         if (sz.mesh && sz.mesh.material) sz.mesh.material.opacity = 0.8;
       });
