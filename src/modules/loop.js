@@ -74,7 +74,7 @@ export function startLoop() {
     // HUD updates
     hudTimer += dt;
     if (hudTimer >= HUD_STEP) {
-      hudTimer -= HUD_STEP;
+      hudTimer %= HUD_STEP;
       const speed = Math.hypot(drone.vel.x, drone.vel.z);
       const nextStatusSpeed = `HS ${speed.toFixed(1)}m/s`;
       const nextStatusAlt   = `ALT ${drone.pos.y.toFixed(1)}m`;
