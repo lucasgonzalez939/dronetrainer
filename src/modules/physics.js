@@ -322,7 +322,7 @@ export function updateVisualAids(dt, elapsedTime) {
   altRing.position.set(drone.pos.x, 0.028, drone.pos.z);
   const ringRadius = 0.35 + Math.min(alt, 6) * 0.18;
   altRing.scale.setScalar(ringRadius / 0.5);
-  altRingMat.opacity = Math.min(0.22, 0.07 + alt * 0.025);
+  altRingMat.opacity = Math.min(0.2, 0.12 + alt * 0.015);
   altRing.visible = (drone.state !== FlightState.LANDED);
 
   if (DIFFICULTY.windOn && elapsedTime !== undefined) {
