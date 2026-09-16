@@ -276,7 +276,7 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
         const right   = new THREE.Vector3(1,0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
 
         const targetVx = filteredInput.roll  * CONFIG.MAX_SPEED;
-        const targetVz =  filteredInput.pitch * CONFIG.MAX_SPEED; // positive pitch input → backward; forward key sends pitch < 0
+        const targetVz =  filteredInput.pitch * CONFIG.MAX_SPEED; // forward stick (pitch < 0) → negative Vz → drone moves forward
         const targetVy =  filteredInput.throttle * CONFIG.MAX_VERT_SPEED;
 
         const targetWorldVel = new THREE.Vector3()
