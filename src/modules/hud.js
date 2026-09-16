@@ -8,7 +8,7 @@ const horizCtx   = document.getElementById('horizon-canvas').getContext('2d');
 const compassCtx = document.getElementById('compass-canvas').getContext('2d');
 const driftCtx   = document.getElementById('wind-drift-canvas').getContext('2d');
 let lastSpeedBand = '';
-let lastSpeedText = '';
+let lastSpeedHeight = '';
 let lastBatteryPct = '';
 let lastBatteryColor = '';
 let lastBatterySecs = -1;
@@ -22,9 +22,9 @@ export function updateSpeedTape(speedH) {
   const band = speedH < maxSpd * 0.5 ? '#4caf50' : speedH < maxSpd * 0.8 ? '#ff9800' : '#e53935';
   const heightText = pct.toFixed(1) + '%';
   const speedText = speedH.toFixed(1);
-  if (heightText !== lastSpeedText) {
+  if (heightText !== lastSpeedHeight) {
     fill.style.height = heightText;
-    lastSpeedText = heightText;
+    lastSpeedHeight = heightText;
   }
   if (band !== lastSpeedBand) {
     fill.style.background = band;
