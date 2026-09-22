@@ -126,7 +126,7 @@ function pollGamepad() {
 
 export function initJoysticks() {
   new VirtualJoystick('left-zone',  'left-knob',  (x,y) => { rawInput.yaw=x;  rawInput.throttle=-y; });
-  new VirtualJoystick('right-zone', 'right-knob', (x,y) => { rawInput.roll=x; rawInput.pitch=-y; });
+  new VirtualJoystick('right-zone', 'right-knob', (x,y) => { rawInput.roll=x; rawInput.pitch=y; });
 
   // Keyboard
   window.addEventListener('keydown', (e) => {
