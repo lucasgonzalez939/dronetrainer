@@ -64,16 +64,6 @@ function applyKeyboard() {
 
   if (JOY_CONFIG.swapKeyboard) {
     // Swapped: WASD → throttle/yaw  |  arrows → pitch/roll
-    if (keysDown.has('KeyW'))        kThrottle =  1;
-    if (keysDown.has('KeyS'))        kThrottle = -1;
-    if (keysDown.has('KeyA'))        kYaw      = -1;
-    if (keysDown.has('KeyD'))        kYaw      =  1;
-    if (keysDown.has('ArrowUp'))     kPitch    = -1;
-    if (keysDown.has('ArrowDown'))   kPitch    =  1;
-    if (keysDown.has('ArrowLeft'))   kRoll     = -1;
-    if (keysDown.has('ArrowRight'))  kRoll     =  1;
-  } else {
-    // Default: arrows → throttle/yaw  |  WASD → pitch/roll
     if (keysDown.has('ArrowUp'))    kThrottle =  1;
     if (keysDown.has('ArrowDown'))  kThrottle = -1;
     if (keysDown.has('ArrowLeft'))  kYaw      = -1;
@@ -82,6 +72,17 @@ function applyKeyboard() {
     if (keysDown.has('KeyS'))       kPitch    =  1;
     if (keysDown.has('KeyA'))       kRoll     = -1;
     if (keysDown.has('KeyD'))       kRoll     =  1;
+    
+  } else {
+    // Default: arrows → throttle/yaw  |  WASD → pitch/roll
+    if (keysDown.has('KeyW'))        kThrottle =  1;
+    if (keysDown.has('KeyS'))        kThrottle = -1;
+    if (keysDown.has('KeyA'))        kYaw      = -1;
+    if (keysDown.has('KeyD'))        kYaw      =  1;
+    if (keysDown.has('ArrowUp'))     kPitch    = -1;
+    if (keysDown.has('ArrowDown'))   kPitch    =  1;
+    if (keysDown.has('ArrowLeft'))   kRoll     = -1;
+    if (keysDown.has('ArrowRight'))  kRoll     =  1;
   }
 
   if (kThrottle) rawInput.throttle = kThrottle * JOY_CONFIG.sensitivity;

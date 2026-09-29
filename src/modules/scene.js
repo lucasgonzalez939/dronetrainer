@@ -23,6 +23,8 @@ export let altRing, altRingMat;
 export const WIND_PARTICLE_COUNT = 180;
 export const windParticlePositions = new Float32Array(180 * 3);
 export let windParticleGeo, windParticleMat, windParticles;
+export const planeWidth = 100;
+export const planeHeight = 100;
 
 // Drone mesh objects
 export let droneGroup;
@@ -170,8 +172,8 @@ export function initScene() {
   const sun = new THREE.DirectionalLight(0xfff0cc, 1.1);
   sun.position.set(40, 60, 30);
   sun.castShadow = true;
-  sun.shadow.mapSize.width  = 1024;
-  sun.shadow.mapSize.height = 1024;
+  sun.shadow.mapSize.width  = 100;
+  sun.shadow.mapSize.height = 100;
   sun.shadow.camera.near  = 0.5;
   sun.shadow.camera.far   = 300;
   sun.shadow.camera.left  = -80;
@@ -204,7 +206,7 @@ export function initScene() {
     }
   `;
   const groundMat = new THREE.ShaderMaterial({ vertexShader: groundVS, fragmentShader: groundFS });
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(600, 600, 1, 1), groundMat);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth, planeHeight, 1, 1), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
@@ -219,30 +221,31 @@ export function initScene() {
   scene.add(path);
 
   // ── Grid ──────────────────────────────────────────────────────────────────
-  const grid = new THREE.GridHelper(60, 60, 0x6b4f2a, 0x4a3520);
-  grid.position.y = 0.012;
-  scene.add(grid);
+  //const grid = new THREE.GridHelper(60, 60, 0x4e3b31, 0x4e3b31);
+  //grid.position.y = 0.012;
+  //scene.add(grid);
 
   // ── Start pad – distinctive with rings and H marker ───────────────────────
-  const padMat = new THREE.MeshStandardMaterial({ color: 0x0097a7, roughness: 0.35, metalness: 0.2 });
-  const startPad = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.025, 32), padMat);
-  startPad.position.set(0, 0.01, 0);
-  startPad.castShadow = true;
+  const padMat = new THREE.MeshStandardMaterial({ color: 0x67686d, roughness: 0.5, metalness: 0 });
+  const startPad = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.001, 32), padMat);
+  startPad.position.set(0, 0.025, 0);
+  startPad.castShadow = false;
+  startPad.receiveShadow = true;
   scene.add(startPad);
 
   // Concentric ring 1
-  const ring1Mat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x003344, roughness: 0.3 });
-  const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.04, 8, 48), ring1Mat);
-  ring1.rotation.x = Math.PI / 2;
-  ring1.position.set(0, 0.028, 0);
-  scene.add(ring1);
+  //const ring1Mat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x003344, roughness: 0.3 });
+  //const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.04, 8, 48), ring1Mat);
+  //ring1.rotation.x = Math.PI / 2;
+  //ring1.position.set(0, 0.028, 0);
+  //scene.add(ring1);
 
   // Concentric ring 2
-  const ring2Mat = new THREE.MeshStandardMaterial({ color: 0x00bcd4, emissive: 0x001a22, roughness: 0.3 });
-  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.025, 8, 48), ring2Mat);
-  ring2.rotation.x = Math.PI / 2;
-  ring2.position.set(0, 0.028, 0);
-  scene.add(ring2);
+  //const ring2Mat = new THREE.MeshStandardMaterial({ color: 0x00bcd4, emissive: 0x001a22, roughness: 0.3 });
+  //const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.025, 8, 48), ring2Mat);
+  //ring2.rotation.x = Math.PI / 2;
+  //ring2.position.set(0, 0.028, 0);
+  //scene.add(ring2);
 
   // H marker bars (cross shape)
   const hMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x333333, roughness: 0.4 });

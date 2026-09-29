@@ -140,9 +140,9 @@ export function startLoop() {
       }
       updateSpeedTape(speed);
       updateCompass(drone.yaw);
-      updateHorizon(drone.pitch, drone.roll);
-      updateDriftIndicator(!drone.vpsActive);
-      updateInputViz();
+      //updateHorizon(drone.pitch, drone.roll);
+      //updateDriftIndicator(!drone.vpsActive);
+      //updateInputViz();
     }
 
     // Slick zone pulse
