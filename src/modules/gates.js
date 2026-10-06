@@ -83,10 +83,16 @@ export function createFlightGate(x, y, z, rotY = 0, size = 1.4) {
 export function createSlickZone(x, z, w, d) {
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(w, d),
-    new THREE.MeshStandardMaterial({ color: 0x29b6f6, roughness: 0.05, metalness: 0.8, transparent: true, opacity: 0.8 })
+    new THREE.MeshBasicMaterial({
+      color: 0x4fc3f7,
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false
+    })
   );
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, 0.018, z);
+  mesh.renderOrder = 1;
   scene.add(mesh);
   setLevelObjects([...levelObjects, mesh]);
   return {

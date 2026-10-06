@@ -3,6 +3,7 @@
  */
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import { PERFORMANCE } from './state.js';
 
 export let scene, camera, renderer;
 
@@ -31,6 +32,35 @@ export let droneGroup;
 export let propGroups = [];
 export let motorLights = [];
 export let motorStartupTimer = 0;
+const performanceClouds = [];
+const performanceEnvironment = [];
+
+export function registerPerformanceObject(obj, kind = 'environment') {
+  if (!obj) return;
+  if (kind === 'cloud') {
+    performanceClouds.push(obj);
+  } else {
+    performanceEnvironment.push(obj);
+  }
+}
+
+export function updatePerformanceSettings() {
+  if (!renderer) return;
+  const lowPower = PERFORMANCE.lowPowerMode;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.0 : 1.25));
+  renderer.shadowMap.enabled = !lowPower && PERFORMANCE.shadows;
+
+  performanceClouds.forEach(obj => {
+    obj.visible = !lowPower && PERFORMANCE.environment;
+  });
+  performanceEnvironment.forEach(obj => {
+    obj.visible = !lowPower && PERFORMANCE.environment;
+  });
+
+  if (windParticles) {
+    windParticles.visible = !lowPower && PERFORMANCE.windParticles && !!scene?.fog;
+  }
+}
 
 // Setters for mutable primitives
 export function setYawArcStartAngle(v) { yawArcStartAngle = v; }
@@ -164,6 +194,7 @@ export function initScene() {
     const cloud = new THREE.Mesh(new THREE.PlaneGeometry(120, 50), cMat);
     cloud.position.set(cx, cy, cz);
     cloud.lookAt(0, cy, 0);
+    registerPerformanceObject(cloud, 'cloud');
     scene.add(cloud);
   });
 
@@ -327,10 +358,13 @@ export function initScene() {
   camera.position.set(0, 0.8, 2.2);
   camera.lookAt(0, 0.1, 0);
 
+  updatePerformanceSettings();
+
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    updatePerformanceSettings();
   });
 }
 
@@ -364,6 +398,7 @@ function _buildEnvironment() {
     trunk.position.set(tx, trunkH / 2, tz);
     trunk.castShadow = true;
     trunk.receiveShadow = true;
+    registerPerformanceObject(trunk);
     scene.add(trunk);
 
     // Layered cone foliage (2 layers)
@@ -371,11 +406,13 @@ function _buildEnvironment() {
     const cone1 = new THREE.Mesh(new THREE.ConeGeometry(foliageR, treeH * 0.6, 7), fMat);
     cone1.position.set(tx, trunkH + treeH * 0.22, tz);
     cone1.castShadow = true;
+    registerPerformanceObject(cone1);
     scene.add(cone1);
 
     const cone2 = new THREE.Mesh(new THREE.ConeGeometry(foliageR * 0.65, treeH * 0.45, 7), fMat);
     cone2.position.set(tx, trunkH + treeH * 0.52, tz);
     cone2.castShadow = true;
+    registerPerformanceObject(cone2);
     scene.add(cone2);
   }
 
@@ -403,6 +440,7 @@ function _buildEnvironment() {
     wallMesh.position.y = wallH / 2;
     wallMesh.castShadow = true;
     wallMesh.receiveShadow = true;
+    registerPerformanceObject(wallMesh);
     houseGroup.add(wallMesh);
 
     // Roof (pyramid via ConeGeometry with 4 sides)
@@ -413,15 +451,18 @@ function _buildEnvironment() {
     roof.position.y = wallH + roofH / 2;
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
+    registerPerformanceObject(roof);
     houseGroup.add(roof);
 
     // Door
     const doorMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.9, 0.05), doorMat);
     door.position.set(0, 0.45, d / 2 + 0.01);
+    registerPerformanceObject(door);
     houseGroup.add(door);
 
     houseGroup.position.set(x, 0, z);
+    registerPerformanceObject(houseGroup);
     scene.add(houseGroup);
   });
 
@@ -440,6 +481,7 @@ function _buildEnvironment() {
     rock.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
     rock.castShadow = true;
     rock.receiveShadow = true;
+    registerPerformanceObject(rock);
     scene.add(rock);
   }
 
@@ -455,6 +497,7 @@ function _buildEnvironment() {
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.0, 6), postMat);
     post.position.set(fx, 0.5, fz);
     post.castShadow = true;
+    registerPerformanceObject(post);
     scene.add(post);
 
     // Wire between consecutive posts
@@ -465,12 +508,16 @@ function _buildEnvironment() {
       new THREE.Vector3(fx, 0.7, fz),
       new THREE.Vector3(nx, 0.7, nz)
     ]);
-    scene.add(new THREE.Line(wGeo, wireMat));
+    const fenceLine = new THREE.Line(wGeo, wireMat);
+    registerPerformanceObject(fenceLine);
+    scene.add(fenceLine);
     const wGeo2 = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(fx, 0.35, fz),
       new THREE.Vector3(nx, 0.35, nz)
     ]);
-    scene.add(new THREE.Line(wGeo2, wireMat));
+    const fenceLine2 = new THREE.Line(wGeo2, wireMat);
+    registerPerformanceObject(fenceLine2);
+    scene.add(fenceLine2);
   }
 }
 

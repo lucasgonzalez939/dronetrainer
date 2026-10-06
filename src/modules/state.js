@@ -45,6 +45,37 @@ export const DIFFICULTY = {
   vpsOn:        true
 };
 
+export const PERFORMANCE = {
+  lowPowerMode: false,
+  shadows: true,
+  environment: true,
+  windParticles: true,
+  flightAids: true,
+  vpsBeam: true,
+  headingRing: true,
+  droneShadow: true,
+  trail: true,
+  altRing: true
+};
+
+export const CAMERA_VIEW_MODES = {
+  CHASE: 'chase',
+  FPV: 'fpv',
+  PILOT: 'pilot',
+  PILOT_FRAME: 'pilot-frame'
+};
+
+export const CAMERA_SETTINGS = {
+  turnSmoothing: 0.06,
+  chaseDistance: 1.8,
+  chaseHeight: 0.75,
+  fpvLookAhead: 5.0,
+  pilotFollowStrength: 0.08,
+  pilotDistance: 1.2,
+  pilotHeight: 1.0,
+  pilotFrame: false
+};
+
 export const JOY_CONFIG = {
   sensitivity: 1.0,
   exponent:    3.0,
@@ -107,6 +138,17 @@ export let fsWindPreset     = 'calm';
 
 // Camera
 export let isFPVMode = false;
+export let cameraViewMode = CAMERA_VIEW_MODES.CHASE;
+export function setCameraViewMode(v) {
+  cameraViewMode = v;
+  isFPVMode = v === CAMERA_VIEW_MODES.FPV;
+}
+export function setPilotFrame(v) {
+  CAMERA_SETTINGS.pilotFrame = v;
+  if (v && cameraViewMode !== CAMERA_VIEW_MODES.PILOT && cameraViewMode !== CAMERA_VIEW_MODES.PILOT_FRAME) {
+    cameraViewMode = CAMERA_VIEW_MODES.PILOT_FRAME;
+  }
+}
 
 // ── Wind gust burst (emergency scenario) ──────────────────────────────────
 export let gustBurstActive    = false;

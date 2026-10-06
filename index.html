@@ -140,6 +140,160 @@
         </div>
       </div>
 
+      <!-- Performance -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">RENDIMIENTO</div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">⚙️ Modo bajo consumo</div>
+            <div class="cfg-toggle-sub">Reduce sombras, entorno y ayudas visuales</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-low-power">
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">🌑 Sombras</div>
+            <div class="cfg-toggle-sub">Desactiva sombras dinámicas del mundo</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-shadows" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">🌿 Entorno detallado</div>
+            <div class="cfg-toggle-sub">Oculta árboles, rocas y vallas decorativas</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-env-detail" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">💨 Partículas de viento</div>
+            <div class="cfg-toggle-sub">Reduce partículas de deriva atmosférica</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-wind-particles" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">🧭 Ayudas de vuelo</div>
+            <div class="cfg-toggle-sub">Activa/desactiva todos los elementos de asistencia</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-flight-aids" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Flight aids -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">ASISTENCIA VISUAL</div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">VPS beam</div>
+            <div class="cfg-toggle-sub">Luz/volumen de pérdida de posición</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-vps-beam" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">Anillo de dirección</div>
+            <div class="cfg-toggle-sub">Indicador circular de giro y orientación</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-heading-ring" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">Sombra del dron</div>
+            <div class="cfg-toggle-sub">Sombra en el suelo</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-drone-shadow" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">Traza del vuelo</div>
+            <div class="cfg-toggle-sub">Línea de recorrido de la trayectoria</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-trail" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">Anillo de altitud</div>
+            <div class="cfg-toggle-sub">Indicador de altura alrededor del dron</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-alt-ring" checked>
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Camera -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">CÁMARA</div>
+
+        <div class="cfg-slider-row">
+          <label>Retardo giro</label>
+          <input type="range" id="cfg-cam-smoothing" min="0" max="0.22" step="0.01" value="0.06">
+          <span class="cfg-slider-value" id="cfg-cam-smoothing-val">0.06</span>
+        </div>
+
+        <div class="cfg-slider-row">
+          <label>Distancia</label>
+          <input type="range" id="cfg-cam-distance" min="1.0" max="3.5" step="0.1" value="1.8">
+          <span class="cfg-slider-value" id="cfg-cam-distance-val">1.8m</span>
+        </div>
+
+        <div class="cfg-slider-row">
+          <label>Altura</label>
+          <input type="range" id="cfg-cam-height" min="0.3" max="1.4" step="0.05" value="0.75">
+          <span class="cfg-slider-value" id="cfg-cam-height-val">0.75m</span>
+        </div>
+
+        <div class="cfg-toggle-row">
+          <div>
+            <div class="cfg-toggle-label">📺 Marco de cámara</div>
+            <div class="cfg-toggle-sub">Muestra el frame tipo mando del dron</div>
+          </div>
+          <label class="cfg-toggle">
+            <input type="checkbox" id="cfg-pilot-frame">
+            <span class="cfg-toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
       <!-- Flight mode -->
       <div class="cfg-section">
         <div class="cfg-section-title">MODO DE VUELO</div>
@@ -233,6 +387,11 @@
       <div class="fpv-prop-blade"></div>
       <div class="fpv-prop-blade"></div>
     </div>
+  </div>
+
+  <div id="pilot-frame-overlay" aria-hidden="true">
+    <div class="pilot-frame-screen"></div>
+    <div class="pilot-frame-screen inner"></div>
   </div>
 
   <div id="canvas-container"></div>
