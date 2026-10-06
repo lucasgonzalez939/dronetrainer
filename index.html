@@ -44,8 +44,8 @@
       <div class="cfg-section">
         <div class="cfg-section-title">VELOCIDAD DE RESPUESTA</div>
         <div class="cfg-speed-row">
-          <button class="cfg-speed-btn" id="cfg-speed-slow" data-speed="slow">🐢 LENTO</button>
-          <button class="cfg-speed-btn active" id="cfg-speed-normal" data-speed="normal">🎯 NORMAL</button>
+          <button class="cfg-speed-btn active" id="cfg-speed-slow" data-speed="slow">🐢 LENTO</button>
+          <button class="cfg-speed-btn" id="cfg-speed-normal" data-speed="normal">🎯 NORMAL</button>
           <button class="cfg-speed-btn" id="cfg-speed-fast" data-speed="fast">⚡ RÁPIDO</button>
         </div>
       </div>
@@ -102,11 +102,11 @@
             <div class="cfg-toggle-sub">Fuerza de viento lateral en vuelo</div>
           </div>
           <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-wind-on" checked>
+            <input type="checkbox" id="cfg-wind-on">
             <span class="cfg-toggle-track"></span>
           </label>
         </div>
-        <div class="cfg-slider-row" id="cfg-wind-slider-row">
+        <div class="cfg-slider-row" id="cfg-wind-slider-row" style="display:none">
           <label>Intensidad</label>
           <input type="range" id="cfg-wind-strength" min="0" max="5" step="0.5" value="1">
           <span class="cfg-slider-value" id="cfg-wind-strength-val">1.0</span>
@@ -134,7 +134,7 @@
             <div class="cfg-toggle-sub">Zonas de pérdida de posicionamiento</div>
           </div>
           <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-vps-on" checked>
+            <input type="checkbox" id="cfg-vps-on">
             <span class="cfg-toggle-track"></span>
           </label>
         </div>

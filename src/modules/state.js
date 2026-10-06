@@ -14,13 +14,13 @@ export const FlightState = {
 };
 
 export const CONFIG = {
-  MAX_SPEED:      2.6,
-  MAX_VERT_SPEED: 1.0,
+  MAX_SPEED:      1.2,
+  MAX_VERT_SPEED: 0.5,
   TAKEOFF_SPEED:  0.6,
   LANDING_SPEED:  0.4,
-  MAX_YAW_RATE:   1.8,
-  INPUT_FILTER:   6.0,
-  ACCEL_DAMP:     3.5,
+  MAX_YAW_RATE:   0.9,
+  INPUT_FILTER:   4.0,
+  ACCEL_DAMP:     2.0,
   NORMAL_DRAG:    2.5,
   VPS_FAIL_DRAG:  0.25,
   TILT_FACTOR:    0.12,
@@ -38,11 +38,11 @@ export const SPEED_PRESETS = {
 export const DIFFICULTY = {
   batteryOn:    false,
   batteryTime:  120,
-  windOn:       true,
+  windOn:       false,
   windStrength: 1.0,
   turbOn:       false,
   turbStrength: 1.0,
-  vpsOn:        true
+  vpsOn:        false
 };
 
 export const JOY_CONFIG = {
