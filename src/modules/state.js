@@ -26,13 +26,13 @@ export const CONFIG = {
   TILT_FACTOR:    0.12,
   // Rate/Acro mode: 'attitude' (auto-level) | 'rate' (direct rate control)
   FLIGHT_MODE:    'attitude',
-  MAX_RATE_SPEED: 4.0   // max angular rate deg/s in rate mode
+  MAX_RATE_SPEED: 4.0   // max angular rate rad/s in rate mode
 };
 
 export const SPEED_PRESETS = {
-  slow:   { MAX_SPEED:1.2, MAX_VERT_SPEED:0.5, MAX_YAW_RATE:0.9, INPUT_FILTER:4.0, ACCEL_DAMP:2.0 },
-  normal: { MAX_SPEED:2.6, MAX_VERT_SPEED:1.0, MAX_YAW_RATE:1.8, INPUT_FILTER:6.0, ACCEL_DAMP:3.5 },
-  fast:   { MAX_SPEED:4.5, MAX_VERT_SPEED:1.8, MAX_YAW_RATE:3.0, INPUT_FILTER:9.0, ACCEL_DAMP:5.5 }
+  slow:   { MAX_SPEED:1.2, MAX_VERT_SPEED:0.5, MAX_YAW_RATE:0.9, MAX_RATE_SPEED:2.2, INPUT_FILTER:4.0, ACCEL_DAMP:2.0 },
+  normal: { MAX_SPEED:2.6, MAX_VERT_SPEED:1.0, MAX_YAW_RATE:1.8, MAX_RATE_SPEED:4.0, INPUT_FILTER:6.0, ACCEL_DAMP:3.5 },
+  fast:   { MAX_SPEED:4.5, MAX_VERT_SPEED:1.8, MAX_YAW_RATE:3.0, MAX_RATE_SPEED:6.5, INPUT_FILTER:9.0, ACCEL_DAMP:5.5 }
 };
 
 export const DIFFICULTY = {
