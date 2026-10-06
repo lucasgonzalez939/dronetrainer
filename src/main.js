@@ -58,7 +58,6 @@ document.getElementById('btn-config-close').addEventListener('click', () => {
 document.querySelectorAll('.cfg-speed-btn').forEach(btn => {
   btn.addEventListener('click', () => applySpeedPreset(btn.dataset.speed));
 });
-applySpeedPreset('slow');
 
 // Battery toggle
 const cfgBatteryOn  = document.getElementById('cfg-battery-on');

@@ -346,7 +346,6 @@ export function initScene() {
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', applyViewportSize);
   }
-  requestAnimationFrame(applyViewportSize);
 }
 
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
