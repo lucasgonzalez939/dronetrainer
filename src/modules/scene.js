@@ -50,8 +50,11 @@ export function initScene() {
   const container = document.getElementById('canvas-container');
   const getViewportSize = () => {
     const doc = document.documentElement || {};
-    const w = Math.max(container.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0, 1);
-    const h = Math.max(container.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0, 1);
+    const pick = (primary, fallbackA, fallbackB) => (
+      primary > 0 ? primary : (fallbackA > 0 ? fallbackA : (fallbackB > 0 ? fallbackB : 1))
+    );
+    const w = pick(container.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0);
+    const h = pick(container.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0);
     return { w, h };
   };
   const applyViewportSize = () => {
