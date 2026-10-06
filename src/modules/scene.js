@@ -53,8 +53,8 @@ export function initScene() {
     const pick = (primary, fallbackA, fallbackB) => (
       primary > 0 ? primary : (fallbackA > 0 ? fallbackA : (fallbackB > 0 ? fallbackB : 1))
     );
-    const w = pick(container.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0);
-    const h = pick(container.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0);
+    const w = pick(container?.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0);
+    const h = pick(container?.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0);
     return { w, h };
   };
   const applyViewportSize = () => {
@@ -81,7 +81,7 @@ export function initScene() {
   } else {
     renderer.outputEncoding = THREE.sRGBEncoding; // eslint-disable-line
   }
-  container.appendChild(renderer.domElement);
+  if (container) container.appendChild(renderer.domElement);
 
   // ── Atmospheric fog ─────────────────────────────────────────────────────
   scene.fog = new THREE.FogExp2(0xd4956a, 0.008);
