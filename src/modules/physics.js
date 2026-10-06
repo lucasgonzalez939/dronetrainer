@@ -4,13 +4,14 @@
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
 import {
-  FlightState, CONFIG, DIFFICULTY, PERFORMANCE, CAMERA_SETTINGS, CAMERA_VIEW_MODES,
+  FlightState, CONFIG, DIFFICULTY, PERFORMANCE, CAMERA_SETTINGS, CAMERA_VIEW_MODES, PILOT_CAMERA_SPOTS,
   drone, rawInput, filteredInput, crashAngVel,
   cameraViewMode,
   levelSlickZones, obstacles,
   windVector,
   isFreestyleMode,
   fsWindPreset,
+  emergencyDisconnect,
   gustBurstActive, gustBurstTimer, gustBurstDuration, gustBurstMult,
   setGustBurstTimer, setGustBurstActive
 } from './state.js';
@@ -34,6 +35,11 @@ import { FREESTYLE_WIND_PRESETS } from './freestyle.js';
 import { LEVEL_DEFS } from './levels.js';
 
 const vpsWarningEl = document.getElementById('vps-warning');
+const emergencyWarningEl = document.getElementById('emergency-warning');
+const _pilotTargetDir = new THREE.Vector3();
+const _pilotFallbackDir = new THREE.Vector3();
+const _pilotLookTarget = new THREE.Vector3();
+let pilotLookDir = null;
 
 // Wind shear altitude bands: { maxAlt, dirMult }
 // Each band overrides wind direction scale based on drone altitude
@@ -115,6 +121,14 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
       l.intensity = 0;
       if (l._led) l._led.material.emissiveIntensity = 0;
     });
+  }
+
+  const emergencyActive = emergencyDisconnect && drone.state !== FlightState.LANDED && drone.state !== FlightState.CRASHED;
+  if (emergencyWarningEl) {
+    emergencyWarningEl.style.display = emergencyActive ? 'block' : 'none';
+  }
+  if (emergencyDisconnect && (drone.state === FlightState.TAKING_OFF || drone.state === FlightState.FLYING)) {
+    setFlightState(FlightState.LANDING);
   }
 
   // ── Second-order motor RPM spool model ──────────────────────────────────
@@ -363,17 +377,27 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
   }
 
   if (cameraViewMode === CAMERA_VIEW_MODES.PILOT || cameraViewMode === CAMERA_VIEW_MODES.PILOT_FRAME) {
-    const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
-    const targetPos = drone.pos.clone()
-      .addScaledVector(forward, -CAMERA_SETTINGS.pilotDistance)
-      .add(new THREE.Vector3(0, CAMERA_SETTINGS.pilotHeight, 0));
-    const lookTarget = drone.pos.clone().add(new THREE.Vector3(0, 0.12, 0));
-    if (CAMERA_SETTINGS.turnSmoothing <= 0) {
-      camera.position.copy(targetPos);
+    const spot = PILOT_CAMERA_SPOTS[CAMERA_SETTINGS.pilotSpot] || PILOT_CAMERA_SPOTS.startPad;
+    camera.position.copy(spot);
+
+    _pilotLookTarget.copy(drone.pos).add(new THREE.Vector3(0, 0.12, 0));
+    _pilotTargetDir.copy(_pilotLookTarget).sub(camera.position);
+    if (_pilotTargetDir.lengthSq() < 0.0001) {
+      _pilotFallbackDir.set(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+      _pilotTargetDir.copy(_pilotFallbackDir);
     } else {
-      camera.position.lerp(targetPos, CAMERA_SETTINGS.turnSmoothing);
+      _pilotTargetDir.normalize();
     }
-    camera.lookAt(lookTarget);
+
+    if (!pilotLookDir) {
+      pilotLookDir = _pilotTargetDir.clone();
+    } else {
+      const dirLerp = Math.min(1, dt * 6.0);
+      pilotLookDir.lerp(_pilotTargetDir, dirLerp).normalize();
+    }
+
+    _pilotLookTarget.copy(camera.position).addScaledVector(pilotLookDir, CAMERA_SETTINGS.pilotLookDistance);
+    camera.lookAt(_pilotLookTarget);
     return;
   }
 

@@ -82,11 +82,12 @@
 .lp-level-badge.active { background: rgba(255,202,40,0.15); color: #ffca28; }
 .lp-mode-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
 }
 .lp-mode-btn {
-  flex: 1;
+  flex: 1 1 120px;
   padding: 11px 8px;
   border-radius: 6px;
   border: 1.5px solid rgba(255,255,255,0.15);
@@ -102,6 +103,7 @@
 }
 .lp-mode-btn:hover { background: rgba(255,255,255,0.10); }
 #lp-btn-freestyle { border-color: #00897b; color: #4db6ac; }
+#lp-btn-freestyle-indoor { border-color: #1565c0; color: #64b5f6; }
 #lp-btn-reset     { border-color: rgba(229,57,53,0.4); color: rgba(229,57,53,0.75); }
 #lp-btn-close {
   width: 100%;

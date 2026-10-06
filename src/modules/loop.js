@@ -3,10 +3,11 @@
  */
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
-import { scene, camera, renderer } from './scene.js';
+import { scene, camera, renderer, fpvPipCamera, droneGroup } from './scene.js';
 import {
-  FlightState, DIFFICULTY,
+  FlightState, DIFFICULTY, CAMERA_SETTINGS, CAMERA_VIEW_MODES,
   drone, isFreestyleMode, isFPVMode,
+  cameraViewMode,
   currentLevel,
   batteryTimeLeft, setBatteryTimeLeft,
   batteryDepleted, setBatteryDepleted,
@@ -39,6 +40,56 @@ let replayPlaying  = false;
 let replayTimer    = 0;
 const REPLAY_SPEED = 1.0; // playback speed multiplier
 const REPLAY_INTERVAL = 0.05; // must match REPLAY_SAMPLE_INTERVAL in missions.js
+const _fpvForward = new THREE.Vector3();
+const _fpvUp = new THREE.Vector3(0, 1, 0);
+const _fpvLookTarget = new THREE.Vector3();
+const PILOT_FPV_SIZE_PRESETS = {
+  auto: { ratio: 0.30, minW: 180, maxW: 420 },
+  small: { ratio: 0.24, minW: 150, maxW: 340 },
+  medium: { ratio: 0.30, minW: 180, maxW: 420 },
+  large: { ratio: 0.36, minW: 220, maxW: 500 }
+};
+
+function resolvePilotPipSizePreset(drawW) {
+  const selected = CAMERA_SETTINGS.pilotFrameSize;
+  if (selected === 'auto') {
+    if (drawW < 760) return PILOT_FPV_SIZE_PRESETS.small;
+    if (drawW < 1280) return PILOT_FPV_SIZE_PRESETS.medium;
+    return PILOT_FPV_SIZE_PRESETS.large;
+  }
+  return PILOT_FPV_SIZE_PRESETS[selected] || PILOT_FPV_SIZE_PRESETS.medium;
+}
+
+function applyFpvDroneRenderState() {
+  if (!droneGroup) return [];
+  const changes = [];
+  const setVisible = (obj, visible) => {
+    if (obj.visible !== visible) {
+      changes.push([obj, obj.visible]);
+      obj.visible = visible;
+    }
+  };
+
+  if (!CAMERA_SETTINGS.fpvBladeCues) {
+    setVisible(droneGroup, false);
+    return changes;
+  }
+
+  setVisible(droneGroup, true);
+  droneGroup.traverse(obj => {
+    if (obj !== droneGroup && obj.userData && obj.userData.hideInFpv) {
+      setVisible(obj, false);
+    }
+  });
+  return changes;
+}
+
+function restoreDroneRenderState(changes) {
+  for (let i = changes.length - 1; i >= 0; i--) {
+    const [obj, visible] = changes[i];
+    obj.visible = visible;
+  }
+}
 
 function _buildReplayGhost() {
   if (replayGhost) { scene.remove(replayGhost); replayGhost = null; }
@@ -114,7 +165,50 @@ export function startLoop() {
       replayGhost.position.set(pt.x, pt.y, pt.z);
     }
 
+    const drawW = renderer.domElement.width;
+    const drawH = renderer.domElement.height;
+
+    const renderMainFpv = cameraViewMode === CAMERA_VIEW_MODES.FPV;
+    let mainFpvChanges = [];
+    if (renderMainFpv) {
+      mainFpvChanges = applyFpvDroneRenderState();
+    }
+
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, drawW, drawH);
     renderer.render(scene, camera);
+
+    if (renderMainFpv) {
+      restoreDroneRenderState(mainFpvChanges);
+    }
+
+    const isPilotView = cameraViewMode === CAMERA_VIEW_MODES.PILOT || cameraViewMode === CAMERA_VIEW_MODES.PILOT_FRAME;
+    const showPilotFpvPip = isPilotView && CAMERA_SETTINGS.pilotFrame;
+    if (showPilotFpvPip && fpvPipCamera) {
+      _fpvForward.set(0, 0, -1).applyAxisAngle(_fpvUp, drone.yaw);
+      fpvPipCamera.position.copy(drone.pos).addScaledVector(_fpvUp, 0.05);
+      _fpvLookTarget.copy(drone.pos).addScaledVector(_fpvForward, CAMERA_SETTINGS.fpvLookAhead);
+      fpvPipCamera.lookAt(_fpvLookTarget);
+
+      const sizePreset = resolvePilotPipSizePreset(drawW);
+      const insetW = Math.max(sizePreset.minW, Math.min(Math.floor(drawW * sizePreset.ratio), sizePreset.maxW));
+      const insetH = Math.floor(insetW * 0.58);
+      const insetX = Math.floor((drawW - insetW) * 0.5);
+      const insetY = Math.floor(drawH * 0.045);
+
+      fpvPipCamera.aspect = insetW / insetH;
+      fpvPipCamera.updateProjectionMatrix();
+
+      renderer.clearDepth();
+      renderer.setScissorTest(true);
+      renderer.setScissor(insetX, insetY, insetW, insetH);
+      renderer.setViewport(insetX, insetY, insetW, insetH);
+
+      const pipFpvChanges = applyFpvDroneRenderState();
+      renderer.render(scene, fpvPipCamera);
+      restoreDroneRenderState(pipFpvChanges);
+      renderer.setScissorTest(false);
+    }
 
     // FPV propeller animation
     const isAirborne = drone.state !== FlightState.LANDED;

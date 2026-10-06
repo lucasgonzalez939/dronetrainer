@@ -214,6 +214,20 @@
   background: #fff;
   box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
+.cfg-select {
+  flex: 1;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  font-size: 11px;
+  padding: 0 8px;
+  outline: none;
+}
+.cfg-select option {
+  color: #111;
+}
 .cfg-slider-value { font-size: 11px; color: rgba(255,255,255,0.6); width: 24px; text-align: right; flex-shrink: 0; }
 /* Close button */
 #btn-config-close {

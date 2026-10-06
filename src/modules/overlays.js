@@ -5,7 +5,7 @@
 import { currentLevel, setCurrentLevel, levelBestTimes, levelStars } from './state.js';
 import { LEVEL_DEFS, loadLevel } from './levels.js';
 import { loadProgress, resetProgress } from './progress.js';
-import { loadFreestyle } from './freestyle.js';
+import { loadFreestyle, loadIndoorFreestyle } from './freestyle.js';
 
 const levelOverlay  = document.getElementById('level-overlay');
 const ovLevelTitle  = document.getElementById('ov-level-title');
@@ -16,6 +16,7 @@ const btnStartLevel = document.getElementById('btn-start-level');
 const btnPrevLevel  = document.getElementById('btn-prev-level');
 const btnFreestyle  = document.getElementById('btn-freestyle');
 const levelFade     = document.getElementById('level-fade');
+let overlayLaunchMode = 'level'; // 'level' | 'freestyle-outdoor' | 'freestyle-indoor'
 
 // Smooth black fade then call fn, then fade back in
 function fadeAndRun(fn) {
@@ -53,6 +54,7 @@ export function showLevelOverlay(idx, isTransition) {
   btnStartLevel.textContent = isTransition ? '▶ EMPEZAR NIVEL' : 'COMENZAR';
   btnPrevLevel.style.display  = (idx > 0) ? 'inline-block' : 'none';
   btnFreestyle.style.display  = 'none';
+  overlayLaunchMode = 'level';
   levelOverlay.classList.add('active');
 }
 
@@ -61,15 +63,14 @@ export function buildLevelProgressPanel() {
   const list = document.getElementById('lp-levels-list');
   list.innerHTML = '';
   LEVEL_DEFS.forEach((def, idx) => {
-    const unlocked  = idx <= prog.maxUnlocked;
     const completed = prog.completed.includes(idx);
     const isCurrent = idx === currentLevel;
 
     const row = document.createElement('div');
-    row.className = 'lp-level-row' + (unlocked ? '' : ' lp-level-locked');
+    row.className = 'lp-level-row';
 
     const numEl = document.createElement('div');
-    numEl.className = 'lp-level-num' + (completed ? ' completed' : (unlocked ? ' unlocked' : ''));
+    numEl.className = 'lp-level-num' + (completed ? ' completed' : ' unlocked');
     numEl.textContent = idx + 1;
 
     const info = document.createElement('div');
@@ -78,19 +79,17 @@ export function buildLevelProgressPanel() {
 
     const badge = document.createElement('div');
     badge.className = 'lp-level-badge' + (completed ? ' done' : (isCurrent ? ' active' : ''));
-    badge.textContent = completed ? '✓ HECHO' : (isCurrent ? 'ACTIVO' : (unlocked ? 'DESBLOQUEADO' : '🔒'));
+    badge.textContent = completed ? '✓ HECHO' : (isCurrent ? 'ACTIVO' : 'PENDIENTE');
 
     row.appendChild(numEl);
     row.appendChild(info);
     row.appendChild(badge);
 
-    if (unlocked) {
-      row.addEventListener('click', () => {
-        closeLevelProgressOverlay();
-        setCurrentLevel(idx);
-        showLevelOverlay(idx, true);
-      });
-    }
+    row.addEventListener('click', () => {
+      closeLevelProgressOverlay();
+      setCurrentLevel(idx);
+      showLevelOverlay(idx, true);
+    });
     list.appendChild(row);
   });
 }
@@ -107,6 +106,14 @@ export function closeLevelProgressOverlay() {
 export function initOverlayEvents() {
   btnStartLevel.addEventListener('click', () => {
     levelOverlay.classList.remove('active');
+    if (overlayLaunchMode === 'freestyle-indoor') {
+      fadeAndRun(() => loadIndoorFreestyle());
+      return;
+    }
+    if (overlayLaunchMode === 'freestyle-outdoor') {
+      fadeAndRun(() => loadFreestyle());
+      return;
+    }
     fadeAndRun(() => loadLevel(currentLevel));
   });
 
@@ -133,7 +140,23 @@ export function initOverlayEvents() {
     ovDesc.textContent        = "Explora el mapa, pasa por los aros y mejora tu tiempo.";
     ovObjectives.innerHTML    = "<li>Aros, pilares y paredes aleatorias</li><li>Viento configurable desde el panel inferior</li>";
     btnStartLevel.textContent = '▶ EMPEZAR NIVEL';
-    btnFreestyle.style.display = 'inline-block';
+    btnFreestyle.style.display = 'none';
+    btnPrevLevel.style.display = 'none';
+    overlayLaunchMode = 'freestyle-outdoor';
+    levelOverlay.classList.add('active');
+  });
+
+  document.getElementById('lp-btn-freestyle-indoor').addEventListener('click', () => {
+    closeLevelProgressOverlay();
+    setCurrentLevel(0);
+    ovLevelTitle.textContent  = "MODO LIBRE INTERIOR";
+    ovSubtitle.textContent    = "Espacios cerrados, maniobras 3D";
+    ovDesc.textContent        = "Entrena control fino en pasillos y marcos elevados dentro de un hangar simulado.";
+    ovObjectives.innerHTML    = "<li>Ruta de aros aleatorios en entorno indoor</li><li>Más paredes, columnas y cambios de altura</li><li>Viento configurable desde el panel inferior</li>";
+    btnStartLevel.textContent = '▶ EMPEZAR NIVEL';
+    btnFreestyle.style.display = 'none';
+    btnPrevLevel.style.display = 'none';
+    overlayLaunchMode = 'freestyle-indoor';
     levelOverlay.classList.add('active');
   });
 

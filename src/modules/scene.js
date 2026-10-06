@@ -6,6 +6,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.m
 import { PERFORMANCE } from './state.js';
 
 export let scene, camera, renderer;
+export let fpvPipCamera;
 
 // Visual aid objects (exported for physics/loop to update)
 export let shadowDisc, shadowMat;
@@ -80,6 +81,7 @@ export function initScene() {
   const container = document.getElementById('canvas-container');
   scene    = new THREE.Scene();
   camera   = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  fpvPipCamera = new THREE.PerspectiveCamera(75, 16 / 9, 0.05, 300);
 
   // ── Renderer with cinematic colour grading ──────────────────────────────
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
@@ -533,19 +535,23 @@ function _buildDrone() {
     color: 0xf0f0f0, metalness: 0.3, roughness: 0.5
   });
   const baseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 0.04, 8), bodyMat);
+  baseMesh.userData.hideInFpv = true;
   baseMesh.castShadow = true;
   droneGroup.add(baseMesh);
 
   const topCap = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.018, 8), topCapMat);
+  topCap.userData.hideInFpv = true;
   topCap.position.y = 0.029;
   droneGroup.add(topCap);
 
   // Camera bump (front)
   const camMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.6, roughness: 0.3 });
   const camBump = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 0.04), camMat);
+  camBump.userData.hideInFpv = true;
   camBump.position.set(0, 0.01, -0.09);
   droneGroup.add(camBump);
   const lens = new THREE.Mesh(new THREE.CircleGeometry(0.012, 12), new THREE.MeshStandardMaterial({ color: 0x1a3a5c, metalness: 0.8, roughness: 0.1 }));
+  lens.userData.hideInFpv = true;
   lens.rotation.x = -Math.PI / 2 + 0.3;
   lens.position.set(0, 0.02, -0.112);
   droneGroup.add(lens);
@@ -561,6 +567,7 @@ function _buildDrone() {
   ];
   armDefs.forEach(({ x, z, mat, ry }) => {
     const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.015, 0.155, 8), mat);
+    arm.userData.hideInFpv = true;
     arm.rotation.set(0, ry, Math.PI / 2);
     arm.position.set(x, 0.005, z);
     droneGroup.add(arm);

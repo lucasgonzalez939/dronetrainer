@@ -80,6 +80,66 @@ export function createFlightGate(x, y, z, rotY = 0, size = 1.4) {
   };
 }
 
+// Transparent soft checkpoint ring used for training respawns.
+// It has no collision and does not affect mission progression directly.
+export function createSoftCheckpoint(x, y, z, rotY = 0, size = 1.1) {
+  const group = new THREE.Group();
+
+  const ringMat = new THREE.MeshStandardMaterial({
+    color: 0x80deea,
+    emissive: 0x1b6f78,
+    emissiveIntensity: 0.7,
+    transparent: true,
+    opacity: 0.28,
+    roughness: 0.25,
+    metalness: 0.1
+  });
+
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(size * 0.52, 0.05, 10, 44), ringMat);
+  ring.castShadow = false;
+  ring.receiveShadow = false;
+  group.add(ring);
+
+  const pulseMat = new THREE.MeshBasicMaterial({ color: 0x9be7ff, transparent: true, opacity: 0.25 });
+  const pulse = new THREE.Mesh(new THREE.TorusGeometry(size * 0.66, 0.015, 8, 44), pulseMat);
+  pulse.rotation.x = Math.PI / 2;
+  group.add(pulse);
+
+  group.position.set(x, y, z);
+  group.rotation.y = rotY;
+  scene.add(group);
+
+  const light = new THREE.PointLight(0x80deea, 0.45, size * 2.8);
+  light.position.set(x, y, z);
+  scene.add(light);
+
+  setLevelObjects([...levelObjects, group, light]);
+
+  return {
+    center: new THREE.Vector3(x, y, z),
+    radius: size * 0.52,
+    group,
+    ringMat,
+    pulseMat,
+    light,
+    _activated: false,
+    check(depthThreshold = 0.6) {
+      if (drone.pos.distanceTo(this.center) >= this.radius + 0.8) return false;
+      this.group.worldToLocal(_gateLocalPos.copy(drone.pos));
+      return Math.sqrt(_gateLocalPos.x * _gateLocalPos.x + _gateLocalPos.y * _gateLocalPos.y) < this.radius
+        && Math.abs(_gateLocalPos.z) < depthThreshold;
+    },
+    setActivated() {
+      this._activated = true;
+      this.ringMat.opacity = 0.46;
+      this.ringMat.color.setHex(0x26c6da);
+      this.ringMat.emissive.setHex(0x0d8b96);
+      this.light.intensity = 0.75;
+      this.pulseMat.opacity = 0.45;
+    }
+  };
+}
+
 export function createSlickZone(x, z, w, d) {
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(w, d),
