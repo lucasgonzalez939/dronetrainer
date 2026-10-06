@@ -68,7 +68,6 @@ export function initScene() {
   renderer.setSize(initialW, initialH);
   renderer.setPixelRatio(1);
   renderer.shadowMap.enabled = false;
-  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   // outputColorSpace is the current API (Three.js r152+); fall back to the
@@ -342,7 +341,6 @@ export function initScene() {
   window.addEventListener('resize', applyViewportSize);
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', applyViewportSize);
-    window.visualViewport.addEventListener('scroll', applyViewportSize);
   }
 }
 
