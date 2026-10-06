@@ -49,8 +49,9 @@ function seededRand(seed) {
 export function initScene() {
   const container = document.getElementById('canvas-container');
   const getViewportSize = () => {
-    const w = container.clientWidth || window.innerWidth || 1;
-    const h = container.clientHeight || window.innerHeight || 1;
+    const doc = document.documentElement || {};
+    const w = Math.max(container.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0, 1);
+    const h = Math.max(container.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0, 1);
     return { w, h };
   };
   const applyViewportSize = () => {
@@ -342,6 +343,7 @@ export function initScene() {
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', applyViewportSize);
   }
+  requestAnimationFrame(applyViewportSize);
 }
 
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
