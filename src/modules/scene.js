@@ -48,15 +48,30 @@ function seededRand(seed) {
 
 export function initScene() {
   const container = document.getElementById('canvas-container');
+  const getViewportSize = () => {
+    const doc = document.documentElement || {};
+    const pick = (primary, fallbackA, fallbackB) => (
+      primary > 0 ? primary : (fallbackA > 0 ? fallbackA : (fallbackB > 0 ? fallbackB : 1))
+    );
+    const w = pick(container?.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0);
+    const h = pick(container?.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0);
+    return { w, h };
+  };
+  const applyViewportSize = () => {
+    const { w, h } = getViewportSize();
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  };
+  const { w: initialW, h: initialH } = getViewportSize();
   scene    = new THREE.Scene();
-  camera   = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera   = new THREE.PerspectiveCamera(60, initialW / initialH, 0.1, 1000);
 
   // ── Renderer with cinematic colour grading ──────────────────────────────
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.setSize(initialW, initialH);
+  renderer.setPixelRatio(1);
+  renderer.shadowMap.enabled = false;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   // outputColorSpace is the current API (Three.js r152+); fall back to the
@@ -66,7 +81,7 @@ export function initScene() {
   } else {
     renderer.outputEncoding = THREE.sRGBEncoding; // eslint-disable-line
   }
-  container.appendChild(renderer.domElement);
+  if (container) container.appendChild(renderer.domElement);
 
   // ── Atmospheric fog ─────────────────────────────────────────────────────
   scene.fog = new THREE.FogExp2(0xd4956a, 0.008);
@@ -327,11 +342,10 @@ export function initScene() {
   camera.position.set(0, 0.8, 2.2);
   camera.lookAt(0, 0.1, 0);
 
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+  window.addEventListener('resize', applyViewportSize);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', applyViewportSize);
+  }
 }
 
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
