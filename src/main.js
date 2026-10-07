@@ -60,6 +60,59 @@ document.getElementById('btn-config-close').addEventListener('click', () => {
   document.getElementById('config-overlay').classList.remove('active');
 });
 
+const cfgTabButtons = [...document.querySelectorAll('.cfg-tab-btn')];
+const cfgSections = [...document.querySelectorAll('#config-panel .cfg-section[data-cfg-category]')];
+
+function setConfigCategory(category) {
+  cfgTabButtons.forEach((btn) => {
+    const selected = btn.dataset.cfgTab === category;
+    btn.classList.toggle('active', selected);
+    btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+  });
+  cfgSections.forEach((section) => {
+    section.hidden = section.dataset.cfgCategory !== category;
+  });
+  const visibleSections = cfgSections.filter((section) => !section.hidden);
+  if (visibleSections.length && visibleSections.every((section) => section.classList.contains('collapsed'))) {
+    visibleSections[0].classList.remove('collapsed');
+    const title = visibleSections[0].querySelector('.cfg-section-title');
+    if (title) title.setAttribute('aria-expanded', 'true');
+  }
+}
+
+const firstSectionByCategory = new Set();
+cfgSections.forEach((section) => {
+  const category = section.dataset.cfgCategory;
+  const sectionTitle = section.querySelector('.cfg-section-title');
+  if (!firstSectionByCategory.has(category)) {
+    firstSectionByCategory.add(category);
+  } else {
+    section.classList.add('collapsed');
+  }
+  if (!sectionTitle) return;
+  sectionTitle.setAttribute('role', 'button');
+  sectionTitle.setAttribute('tabindex', '0');
+  sectionTitle.setAttribute('aria-expanded', section.classList.contains('collapsed') ? 'false' : 'true');
+  const toggleSection = () => {
+    section.classList.toggle('collapsed');
+    sectionTitle.setAttribute('aria-expanded', section.classList.contains('collapsed') ? 'false' : 'true');
+  };
+  sectionTitle.addEventListener('click', toggleSection);
+  sectionTitle.addEventListener('keydown', (evt) => {
+    if (evt.key === 'Enter' || evt.key === ' ') {
+      evt.preventDefault();
+      toggleSection();
+    }
+  });
+});
+
+cfgTabButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    setConfigCategory(btn.dataset.cfgTab);
+  });
+});
+setConfigCategory((cfgTabButtons.find((btn) => btn.classList.contains('active')) || cfgTabButtons[0])?.dataset.cfgTab || 'flight');
+
 // Speed preset buttons
 document.querySelectorAll('.cfg-speed-btn').forEach(btn => {
   btn.addEventListener('click', () => applySpeedPreset(btn.dataset.speed));

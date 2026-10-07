@@ -101,8 +101,34 @@
   gap: 8px;
 }
 #config-panel h2 svg { width:18px;height:18px;stroke:#fff;stroke-width:2;fill:none; }
+.cfg-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.cfg-tab-btn {
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.72);
+  border-radius: 999px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+}
+.cfg-tab-btn.active {
+  border-color: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
 .cfg-section {
   margin-bottom: 20px;
+}
+.cfg-section[hidden] {
+  display: none !important;
 }
 .cfg-section-title {
   font-size: 11px;
@@ -112,7 +138,26 @@
   text-transform: uppercase;
   margin-bottom: 10px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding-bottom: 4px;
+  padding-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cfg-section-title::after {
+  content: '−';
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+}
+.cfg-section.collapsed .cfg-section-title {
+  margin-bottom: 0;
+}
+.cfg-section.collapsed .cfg-section-title::after {
+  content: '+';
+}
+.cfg-section.collapsed > :not(.cfg-section-title) {
+  display: none;
 }
 /* Speed selector */
 .cfg-speed-row {

@@ -67,7 +67,7 @@ export function setFlightState(newState) {
 export function applySpeedPreset(name) {
   const p = SPEED_PRESETS[name];
   Object.assign(CONFIG, p);
-  document.querySelectorAll('.cfg-speed-btn').forEach(b => {
+  document.querySelectorAll('[data-speed]').forEach(b => {
     b.classList.toggle('active', b.dataset.speed === name);
   });
 }
