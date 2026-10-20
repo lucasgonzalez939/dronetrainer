@@ -375,21 +375,16 @@ export function initScene() {
   camera.position.set(0, 0.8, 2.2);
   camera.lookAt(0, 0.1, 0);
 
-<<<<<<< HEAD
-  window.addEventListener('resize', applyViewportSize);
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', applyViewportSize);
-  }
-=======
-  updatePerformanceSettings();
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  const handleResize = () => {
+    applyViewportSize();
     updatePerformanceSettings();
-  });
->>>>>>> testingv2
+  };
+
+  updatePerformanceSettings();
+  window.addEventListener('resize', handleResize);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleResize);
+  }
 }
 
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
