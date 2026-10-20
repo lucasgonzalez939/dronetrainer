@@ -45,6 +45,49 @@ export const DIFFICULTY = {
   vpsOn:        false
 };
 
+export const PERFORMANCE = {
+  lowPowerMode: false,
+  shadows: true,
+  environment: true,
+  windParticles: true,
+  flightAids: true,
+  vpsBeam: true,
+  headingRing: true,
+  droneShadow: true,
+  trail: true,
+  altRing: true
+};
+
+export const CAMERA_VIEW_MODES = {
+  CHASE: 'chase',
+  FPV: 'fpv',
+  PILOT: 'pilot',
+  PILOT_FRAME: 'pilot-frame'
+};
+
+export const PILOT_CAMERA_SPOTS = {
+  startPad: new THREE.Vector3(0, 1.7, 8.5),
+  westStand: new THREE.Vector3(-12, 2.0, -4.5),
+  eastStand: new THREE.Vector3(12, 2.0, -4.5),
+  farTower: new THREE.Vector3(0, 3.2, 18)
+};
+
+export const CAMERA_SETTINGS = {
+  turnSmoothing: 0.06,
+  chaseDistance: 1.8,
+  chaseHeight: 0.75,
+  fpvLookAhead: 5.0,
+  pilotFollowStrength: 0.08,
+  pilotDistance: 1.2,
+  pilotHeight: 1.0,
+  pilotFrame: false,
+  pilotFrameSize: 'auto',
+  fpvBladeCues: true,
+  pilotSpot: 'startPad',
+  pilotLookDistance: 28,
+  pilotLookDown: 0.08
+};
+
 export const JOY_CONFIG = {
   sensitivity: 1.0,
   exponent:    3.0,
@@ -107,6 +150,21 @@ export let fsWindPreset     = 'calm';
 
 // Camera
 export let isFPVMode = false;
+export let cameraViewMode = CAMERA_VIEW_MODES.CHASE;
+export function setCameraViewMode(v) {
+  cameraViewMode = v;
+  isFPVMode = v === CAMERA_VIEW_MODES.FPV;
+}
+export function setPilotFrame(v) {
+  CAMERA_SETTINGS.pilotFrame = v;
+  if (v && cameraViewMode !== CAMERA_VIEW_MODES.PILOT && cameraViewMode !== CAMERA_VIEW_MODES.PILOT_FRAME) {
+    cameraViewMode = CAMERA_VIEW_MODES.PILOT_FRAME;
+  }
+}
+
+// ── Emergency link-loss simulation ───────────────────────────────────────
+export let emergencyDisconnect = false;
+export function setEmergencyDisconnect(v) { emergencyDisconnect = v; }
 
 // ── Wind gust burst (emergency scenario) ──────────────────────────────────
 export let gustBurstActive    = false;
@@ -121,6 +179,14 @@ export function setGustBurstMult(v)     { gustBurstMult     = v; }
 // ── Moving obstacles list (beyond the single movingGate) ──────────────────
 export let movingObstacles = [];
 export function setMovingObstacles(v) { movingObstacles = v; }
+
+// ── Soft checkpoints (training assist) ───────────────────────────────────
+export let softCheckpoints = []; // array of transparent checkpoint rings
+export let activeSoftCheckpointIdx = -1;
+export let activeRespawnCheckpoint = null; // { pos: THREE.Vector3, yaw: number }
+export function setSoftCheckpoints(v) { softCheckpoints = v; }
+export function setActiveSoftCheckpointIdx(v) { activeSoftCheckpointIdx = v; }
+export function setActiveRespawnCheckpoint(v) { activeRespawnCheckpoint = v; }
 
 // ── Level-best times (timed levels) ───────────────────────────────────────
 export let levelBestTimes = {};

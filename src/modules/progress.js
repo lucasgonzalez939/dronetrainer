@@ -7,9 +7,14 @@ const PROGRESS_KEY = 'dronetrainer_progress_v1';
 export function loadProgress() {
   try {
     const raw = localStorage.getItem(PROGRESS_KEY);
-    return raw ? JSON.parse(raw) : { maxUnlocked: 0, completed: [] };
+    if (!raw) return { completed: [] };
+    const parsed = JSON.parse(raw);
+    const completed = Array.isArray(parsed?.completed)
+      ? parsed.completed.filter((v) => Number.isInteger(v) && v >= 0)
+      : [];
+    return { completed };
   } catch (e) {
-    return { maxUnlocked: 0, completed: [] };
+    return { completed: [] };
   }
 }
 
@@ -24,6 +29,5 @@ export function resetProgress() {
 export function unlockNextLevel(completedIdx) {
   const prog = loadProgress();
   if (!prog.completed.includes(completedIdx)) prog.completed.push(completedIdx);
-  if (prog.maxUnlocked <= completedIdx) prog.maxUnlocked = completedIdx + 1;
   saveProgress(prog);
 }

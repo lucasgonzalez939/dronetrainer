@@ -4,12 +4,14 @@
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
 import {
-  FlightState, CONFIG, DIFFICULTY,
+  FlightState, CONFIG, DIFFICULTY, PERFORMANCE, CAMERA_SETTINGS, CAMERA_VIEW_MODES, PILOT_CAMERA_SPOTS,
   drone, rawInput, filteredInput, crashAngVel,
+  cameraViewMode,
   levelSlickZones, obstacles,
   windVector,
   isFreestyleMode,
   fsWindPreset,
+  emergencyDisconnect,
   gustBurstActive, gustBurstTimer, gustBurstDuration, gustBurstMult,
   setGustBurstTimer, setGustBurstActive
 } from './state.js';
@@ -20,10 +22,10 @@ import {
   shadowDisc, shadowMat,
   vpsBeam, vpsBeamMat,
   headingArrow, headingArrowMat,
-  YAW_ARC_SEGS, yawArcPositions, yawArcGeo, yawArcMat,
+  YAW_ARC_SEGS, yawArcPositions, yawArcGeo, yawArcMat, yawArcLine,
   yawArcStartAngle, setYawArcStartAngle,
   yawArcAlpha,      setYawArcAlpha,
-  TRAIL_LEN, trailPositions, trailGeo, trailMat, trailHistory,
+  TRAIL_LEN, trailPositions, trailGeo, trailMat, trailLine, trailHistory,
   altRing, altRingMat,
   WIND_PARTICLE_COUNT, windParticleGeo, windParticleMat, windParticles,
   camera
@@ -33,6 +35,11 @@ import { FREESTYLE_WIND_PRESETS } from './freestyle.js';
 import { LEVEL_DEFS } from './levels.js';
 
 const vpsWarningEl = document.getElementById('vps-warning');
+const emergencyWarningEl = document.getElementById('emergency-warning');
+const _pilotTargetDir = new THREE.Vector3();
+const _pilotFallbackDir = new THREE.Vector3();
+const _pilotLookTarget = new THREE.Vector3();
+let pilotLookDir = null;
 
 // Wind shear altitude bands: { maxAlt, dirMult }
 // Each band overrides wind direction scale based on drone altitude
@@ -114,6 +121,14 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
       l.intensity = 0;
       if (l._led) l._led.material.emissiveIntensity = 0;
     });
+  }
+
+  const emergencyActive = emergencyDisconnect && drone.state !== FlightState.LANDED && drone.state !== FlightState.CRASHED;
+  if (emergencyWarningEl) {
+    emergencyWarningEl.style.display = emergencyActive ? 'block' : 'none';
+  }
+  if (emergencyDisconnect && (drone.state === FlightState.TAKING_OFF || drone.state === FlightState.FLYING)) {
+    setFlightState(FlightState.LANDING);
   }
 
   // ── Second-order motor RPM spool model ──────────────────────────────────
@@ -354,24 +369,61 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
 
   updateVisualAids(dt, elapsedTime);
 
-  if (isFPVMode) {
+  if (cameraViewMode === CAMERA_VIEW_MODES.FPV) {
     const fpvForward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
     camera.position.copy(drone.pos).addScaledVector(new THREE.Vector3(0,1,0), 0.04);
-    camera.lookAt(drone.pos.clone().add(fpvForward.multiplyScalar(5)));
-  } else {
-    const lookTarget  = drone.pos.clone().add(new THREE.Vector3(0, 0.15, 0));
-    const camOffset   = new THREE.Vector3(0, 0.75, 1.8).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
-    const targetCamPos = drone.pos.clone().add(camOffset);
-    if (targetCamPos.y < 0.25) targetCamPos.y = 0.25;
-    camera.position.lerp(targetCamPos, 0.06);
-    camera.lookAt(lookTarget);
+    camera.lookAt(drone.pos.clone().add(fpvForward.multiplyScalar(CAMERA_SETTINGS.fpvLookAhead)));
+    return;
   }
+
+  if (cameraViewMode === CAMERA_VIEW_MODES.PILOT || cameraViewMode === CAMERA_VIEW_MODES.PILOT_FRAME) {
+    const spot = PILOT_CAMERA_SPOTS[CAMERA_SETTINGS.pilotSpot] || PILOT_CAMERA_SPOTS.startPad;
+    camera.position.copy(spot);
+
+    _pilotLookTarget.copy(drone.pos).add(new THREE.Vector3(0, 0.12, 0));
+    _pilotTargetDir.copy(_pilotLookTarget).sub(camera.position);
+    if (_pilotTargetDir.lengthSq() < 0.0001) {
+      _pilotFallbackDir.set(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+      _pilotTargetDir.copy(_pilotFallbackDir);
+    } else {
+      _pilotTargetDir.normalize();
+    }
+
+    if (!pilotLookDir) {
+      pilotLookDir = _pilotTargetDir.clone();
+    } else {
+      const dirLerp = Math.min(1, dt * 6.0);
+      pilotLookDir.lerp(_pilotTargetDir, dirLerp).normalize();
+    }
+
+    _pilotLookTarget.copy(camera.position).addScaledVector(pilotLookDir, CAMERA_SETTINGS.pilotLookDistance);
+    camera.lookAt(_pilotLookTarget);
+    return;
+  }
+
+  const lookTarget  = drone.pos.clone().add(new THREE.Vector3(0, 0.15, 0));
+  const camOffset   = new THREE.Vector3(
+    0,
+    CAMERA_SETTINGS.chaseHeight,
+    CAMERA_SETTINGS.chaseDistance
+  ).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
+  const targetCamPos = drone.pos.clone().add(camOffset);
+  if (targetCamPos.y < 0.25) targetCamPos.y = 0.25;
+  if (CAMERA_SETTINGS.turnSmoothing <= 0) {
+    camera.position.copy(targetCamPos);
+  } else {
+    camera.position.lerp(targetCamPos, CAMERA_SETTINGS.turnSmoothing);
+  }
+  camera.lookAt(lookTarget);
 }
 
 export function updateVisualAids(dt, elapsedTime) {
   const alt    = Math.max(drone.pos.y, 0.02);
   const speedH = Math.hypot(drone.vel.x, drone.vel.z);
 
+  const aidVisibility = PERFORMANCE.flightAids && !PERFORMANCE.lowPowerMode;
+  const shadowVisible = aidVisibility && PERFORMANCE.droneShadow;
+  shadowDisc.visible = shadowVisible;
   shadowDisc.position.set(drone.pos.x, 0.015, drone.pos.z);
   const baseScale     = 1.0 + alt * 0.45;
   const stretchFactor = 1.0 + speedH * 0.18;
@@ -381,7 +433,7 @@ export function updateVisualAids(dt, elapsedTime) {
   shadowMat.opacity = Math.max(0.15, 0.7 - alt * 0.2);
 
   if (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF) {
-    vpsBeam.visible = true;
+    vpsBeam.visible = aidVisibility && PERFORMANCE.vpsBeam;
     vpsBeam.position.set(drone.pos.x, alt/2, drone.pos.z);
     vpsBeam.scale.set(1.0, alt, 1.0);
     vpsBeamMat.color.setHex(drone.vpsActive ? 0x00e5ff : 0xffb300);
@@ -391,10 +443,24 @@ export function updateVisualAids(dt, elapsedTime) {
   }
 
   const arrowAltScale = 0.8 + alt * 0.4;
+  headingArrow.visible = aidVisibility && PERFORMANCE.headingRing;
   headingArrow.position.set(drone.pos.x, 0.022, drone.pos.z);
   headingArrow.rotation.set(0, drone.yaw, 0);
   headingArrow.scale.setScalar(arrowAltScale);
   headingArrowMat.opacity = Math.max(0.35, Math.min(0.9, 0.9 - alt * 0.08));
+
+  const trailVisible = aidVisibility && PERFORMANCE.trail;
+  const altRingVisible = aidVisibility && PERFORMANCE.altRing;
+  if (!aidVisibility) {
+    setYawArcAlpha(0);
+    setYawArcStartAngle(drone.yaw);
+    yawArcLine.visible = false;
+    trailHistory.length = 0;
+    trailGeo.setDrawRange(0, 2);
+    trailLine.visible = false;
+    altRing.visible = false;
+    return;
+  }
 
   const isYawing = Math.abs(drone.yawRate) > 0.05;
   let newArcAlpha = yawArcAlpha;
@@ -407,6 +473,7 @@ export function updateVisualAids(dt, elapsedTime) {
   }
   setYawArcAlpha(newArcAlpha);
   setYawArcStartAngle(newArcStart);
+  yawArcLine.visible = PERFORMANCE.headingRing;
   yawArcMat.opacity = newArcAlpha * 0.55;
   const arcRadius = 0.5 * arrowAltScale;
   const arcSpan   = Math.sign(drone.yawRate || 1) * Math.min(Math.abs(drone.yawRate) * 0.5, Math.PI * 0.6);
@@ -433,6 +500,7 @@ export function updateVisualAids(dt, elapsedTime) {
   }
   trailGeo.attributes.position.needsUpdate = true;
   trailGeo.setDrawRange(0, Math.max(2, pts));
+  trailLine.visible = trailVisible;
   trailMat.opacity = Math.min(0.45, speedH * 0.12);
 
   const isAirborne = drone.state !== FlightState.LANDED;
@@ -445,7 +513,7 @@ export function updateVisualAids(dt, elapsedTime) {
   const ringRadius = 0.35 + Math.min(alt, 6) * 0.18;
   altRing.scale.setScalar(ringRadius / 0.5);
   altRingMat.opacity = Math.min(0.2, 0.12 + alt * 0.015);
-  altRing.visible = (drone.state !== FlightState.LANDED);
+  altRing.visible = altRingVisible && (drone.state !== FlightState.LANDED);
 
   if (DIFFICULTY.windOn && elapsedTime !== undefined) {
     const wLen = windVector.length();
@@ -463,7 +531,7 @@ export function updateVisualAids(dt, elapsedTime) {
     }
     windParticleGeo.attributes.position.needsUpdate = true;
     windParticleMat.opacity = Math.min(0.35, wLen * 0.08);
-    windParticles.visible = wLen > 0.05;
+    windParticles.visible = !PERFORMANCE.lowPowerMode && PERFORMANCE.windParticles && wLen > 0.05;
   } else {
     windParticles.visible = false;
   }

@@ -230,6 +230,17 @@
   background: rgba(255,152,0,0.16);
 }
 
+#emergency-warning {
+  color: #ff8a80;
+  font-weight: bold;
+  display: none;
+  margin-top: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(244,67,54,0.55);
+  background: rgba(198,40,40,0.2);
+}
+
 /* Battery countdown bar */
 #battery-bar-wrap {
   display: none;

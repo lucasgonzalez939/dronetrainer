@@ -3,21 +3,24 @@
  * Initialises all modules, wires up events, and starts the game loop.
  */
 
-import { initScene, scene } from './modules/scene.js';
+import { initScene, scene, updatePerformanceSettings } from './modules/scene.js';
 import { initJoysticks } from './modules/joystick.js';
 import { initOverlayEvents, showLevelOverlay } from './modules/overlays.js';
 import { applySpeedPreset } from './modules/flightState.js';
 import { setFlightState } from './modules/flightState.js';
 import { loadLevel } from './modules/levels.js';
+import { tryRespawnFromSoftCheckpoint } from './modules/missions.js';
 import { loadFreestyle, exitFreestyleMode, FREESTYLE_WIND_PRESETS } from './modules/freestyle.js';
 import {
-  FlightState, DIFFICULTY, JOY_CONFIG, CONFIG,
+  FlightState, DIFFICULTY, JOY_CONFIG, CONFIG, PERFORMANCE, CAMERA_SETTINGS, CAMERA_VIEW_MODES, PILOT_CAMERA_SPOTS,
   drone, isFreestyleMode,
   fsWindPreset, setFsWindPreset,
   windVector, setWindVector,
   isFPVMode, setIsFPVMode,
   currentLevel,
-  setTimeOfDay, setFogDensity
+  setTimeOfDay, setFogDensity,
+  cameraViewMode, setCameraViewMode, setPilotFrame,
+  emergencyDisconnect, setEmergencyDisconnect
 } from './modules/state.js';
 import { startLoop, startReplay } from './modules/loop.js';
 
@@ -41,7 +44,10 @@ btnTakeoff.addEventListener('click', () => {
     if (isFreestyleMode) {
       loadFreestyle();
     } else {
-      loadLevel(currentLevel);
+      const resumed = tryRespawnFromSoftCheckpoint();
+      if (!resumed) {
+        loadLevel(currentLevel);
+      }
     }
   }
 });
@@ -105,6 +111,191 @@ cfgTurbStr.addEventListener('input', () => {
 document.getElementById('cfg-vps-on').addEventListener('change', (e) => {
   DIFFICULTY.vpsOn = e.target.checked;
 });
+
+// Emergency disconnect simulation
+const cfgEmergencyDisconnect = document.getElementById('cfg-emergency-disconnect');
+if (cfgEmergencyDisconnect) {
+  cfgEmergencyDisconnect.checked = emergencyDisconnect;
+  cfgEmergencyDisconnect.addEventListener('change', () => {
+    const enabled = cfgEmergencyDisconnect.checked;
+    setEmergencyDisconnect(enabled);
+    if (enabled && (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF)) {
+      setFlightState(FlightState.LANDING);
+    }
+  });
+}
+
+// ── Performance toggles ──
+const cfgLowPower  = document.getElementById('cfg-low-power');
+const cfgShadows   = document.getElementById('cfg-shadows');
+const cfgEnvDetail = document.getElementById('cfg-env-detail');
+const cfgWindPart  = document.getElementById('cfg-wind-particles');
+const cfgFlightAids= document.getElementById('cfg-flight-aids');
+
+function syncPerformanceUi() {
+  cfgLowPower.checked = PERFORMANCE.lowPowerMode;
+  cfgShadows.checked = PERFORMANCE.shadows;
+  cfgEnvDetail.checked = PERFORMANCE.environment;
+  cfgWindPart.checked = PERFORMANCE.windParticles;
+  cfgFlightAids.checked = PERFORMANCE.flightAids;
+}
+
+cfgLowPower.addEventListener('change', () => {
+  PERFORMANCE.lowPowerMode = cfgLowPower.checked;
+  if (PERFORMANCE.lowPowerMode) {
+    PERFORMANCE.shadows = false;
+    PERFORMANCE.environment = false;
+    PERFORMANCE.windParticles = false;
+    PERFORMANCE.flightAids = false;
+    PERFORMANCE.vpsBeam = false;
+    PERFORMANCE.headingRing = false;
+    PERFORMANCE.droneShadow = false;
+    PERFORMANCE.trail = false;
+    PERFORMANCE.altRing = false;
+  } else {
+    PERFORMANCE.shadows = true;
+    PERFORMANCE.environment = true;
+    PERFORMANCE.windParticles = true;
+    PERFORMANCE.flightAids = true;
+    PERFORMANCE.vpsBeam = true;
+    PERFORMANCE.headingRing = true;
+    PERFORMANCE.droneShadow = true;
+    PERFORMANCE.trail = true;
+    PERFORMANCE.altRing = true;
+  }
+  syncPerformanceUi();
+  updatePerformanceSettings();
+});
+
+const cfgVpsBeam = document.getElementById('cfg-vps-beam');
+const cfgHeadingRing = document.getElementById('cfg-heading-ring');
+const cfgDroneShadow = document.getElementById('cfg-drone-shadow');
+const cfgTrail = document.getElementById('cfg-trail');
+const cfgAltRing = document.getElementById('cfg-alt-ring');
+
+function syncAssistUi() {
+  cfgVpsBeam.checked = PERFORMANCE.vpsBeam;
+  cfgHeadingRing.checked = PERFORMANCE.headingRing;
+  cfgDroneShadow.checked = PERFORMANCE.droneShadow;
+  cfgTrail.checked = PERFORMANCE.trail;
+  cfgAltRing.checked = PERFORMANCE.altRing;
+}
+
+[cfgShadows, cfgEnvDetail, cfgWindPart, cfgFlightAids, cfgVpsBeam, cfgHeadingRing, cfgDroneShadow, cfgTrail, cfgAltRing].forEach((toggle) => {
+  toggle.addEventListener('change', () => {
+    PERFORMANCE.shadows = cfgShadows.checked;
+    PERFORMANCE.environment = cfgEnvDetail.checked;
+    PERFORMANCE.windParticles = cfgWindPart.checked;
+    PERFORMANCE.flightAids = cfgFlightAids.checked;
+    PERFORMANCE.vpsBeam = cfgVpsBeam.checked;
+    PERFORMANCE.headingRing = cfgHeadingRing.checked;
+    PERFORMANCE.droneShadow = cfgDroneShadow.checked;
+    PERFORMANCE.trail = cfgTrail.checked;
+    PERFORMANCE.altRing = cfgAltRing.checked;
+    PERFORMANCE.lowPowerMode = false;
+    syncPerformanceUi();
+    syncAssistUi();
+    updatePerformanceSettings();
+  });
+});
+
+syncPerformanceUi();
+syncAssistUi();
+updatePerformanceSettings();
+
+const cfgCamSmooth = document.getElementById('cfg-cam-smoothing');
+const cfgCamSmoothVal = document.getElementById('cfg-cam-smoothing-val');
+const cfgCamDistance = document.getElementById('cfg-cam-distance');
+const cfgCamDistanceVal = document.getElementById('cfg-cam-distance-val');
+const cfgCamHeight = document.getElementById('cfg-cam-height');
+const cfgCamHeightVal = document.getElementById('cfg-cam-height-val');
+const cfgPilotFrame = document.getElementById('cfg-pilot-frame');
+const cfgFpvBladeAid = document.getElementById('cfg-fpv-blade-aid');
+const cfgPilotSpot = document.getElementById('cfg-pilot-spot');
+const cfgPilotFrameSize = document.getElementById('cfg-pilot-frame-size');
+
+const PILOT_FRAME_SIZE_PRESETS = {
+  small:  { width: 'min(24vw, 340px)', height: 'min(13.9vw, 196px)', minW: '150px', minH: '86px' },
+  medium: { width: 'min(30vw, 420px)', height: 'min(17.4vw, 244px)', minW: '180px', minH: '104px' },
+  large:  { width: 'min(36vw, 500px)', height: 'min(20.9vw, 292px)', minW: '220px', minH: '124px' }
+};
+
+function resolveAutoPilotFrameSize() {
+  const w = window.innerWidth;
+  if (w < 760) return 'small';
+  if (w < 1280) return 'medium';
+  return 'large';
+}
+
+function applyPilotFrameSizePreset(sizeKey) {
+  const resolvedSize = sizeKey === 'auto' ? resolveAutoPilotFrameSize() : sizeKey;
+  const preset = PILOT_FRAME_SIZE_PRESETS[resolvedSize] || PILOT_FRAME_SIZE_PRESETS.medium;
+  const root = document.documentElement;
+  root.style.setProperty('--pilot-frame-width', preset.width);
+  root.style.setProperty('--pilot-frame-height', preset.height);
+  root.style.setProperty('--pilot-frame-min-width', preset.minW);
+  root.style.setProperty('--pilot-frame-min-height', preset.minH);
+}
+
+function updateCameraValueLabels() {
+  cfgCamSmoothVal.textContent = CAMERA_SETTINGS.turnSmoothing <= 0 ? 'OFF' : (+CAMERA_SETTINGS.turnSmoothing).toFixed(2);
+  cfgCamDistanceVal.textContent = (+CAMERA_SETTINGS.chaseDistance).toFixed(1) + 'm';
+  cfgCamHeightVal.textContent = (+CAMERA_SETTINGS.chaseHeight).toFixed(2) + 'm';
+}
+
+cfgCamSmooth.addEventListener('input', () => {
+  CAMERA_SETTINGS.turnSmoothing = +cfgCamSmooth.value;
+  updateCameraValueLabels();
+});
+cfgCamDistance.addEventListener('input', () => {
+  CAMERA_SETTINGS.chaseDistance = +cfgCamDistance.value;
+  updateCameraValueLabels();
+});
+cfgCamHeight.addEventListener('input', () => {
+  CAMERA_SETTINGS.chaseHeight = +cfgCamHeight.value;
+  updateCameraValueLabels();
+});
+cfgPilotFrame.addEventListener('change', () => {
+  setPilotFrame(cfgPilotFrame.checked);
+  if (cameraViewMode === CAMERA_VIEW_MODES.PILOT || cameraViewMode === CAMERA_VIEW_MODES.PILOT_FRAME) {
+    setCameraViewMode(cfgPilotFrame.checked ? CAMERA_VIEW_MODES.PILOT_FRAME : CAMERA_VIEW_MODES.PILOT);
+  }
+  syncCameraUi();
+});
+cfgFpvBladeAid.addEventListener('change', () => {
+  CAMERA_SETTINGS.fpvBladeCues = cfgFpvBladeAid.checked;
+  syncCameraUi();
+});
+cfgPilotSpot.addEventListener('change', () => {
+  if (PILOT_CAMERA_SPOTS[cfgPilotSpot.value]) {
+    CAMERA_SETTINGS.pilotSpot = cfgPilotSpot.value;
+  }
+});
+cfgPilotFrameSize.addEventListener('change', () => {
+  if (cfgPilotFrameSize.value === 'auto' || PILOT_FRAME_SIZE_PRESETS[cfgPilotFrameSize.value]) {
+    CAMERA_SETTINGS.pilotFrameSize = cfgPilotFrameSize.value;
+  } else {
+    CAMERA_SETTINGS.pilotFrameSize = 'auto';
+  }
+  applyPilotFrameSizePreset(CAMERA_SETTINGS.pilotFrameSize);
+});
+
+if (!PILOT_CAMERA_SPOTS[CAMERA_SETTINGS.pilotSpot]) {
+  CAMERA_SETTINGS.pilotSpot = 'startPad';
+}
+if (CAMERA_SETTINGS.pilotFrameSize !== 'auto' && !PILOT_FRAME_SIZE_PRESETS[CAMERA_SETTINGS.pilotFrameSize]) {
+  CAMERA_SETTINGS.pilotFrameSize = 'auto';
+}
+cfgPilotSpot.value = CAMERA_SETTINGS.pilotSpot;
+cfgPilotFrameSize.value = CAMERA_SETTINGS.pilotFrameSize;
+applyPilotFrameSizePreset(CAMERA_SETTINGS.pilotFrameSize);
+window.addEventListener('resize', () => {
+  if (CAMERA_SETTINGS.pilotFrameSize === 'auto') {
+    applyPilotFrameSizePreset('auto');
+  }
+});
+
+updateCameraValueLabels();
 
 // ── Flight mode buttons ──
 document.querySelectorAll('[data-flightmode]').forEach(btn => {
@@ -216,19 +407,49 @@ cfgKbdSwap.addEventListener('change', () => {
   kbdSwapHint.textContent = cfgKbdSwap.checked ? KBD_HINT_SWAPPED : KBD_HINT_DEFAULT;
 });
 
-// ── FPV camera toggle ──
+// ── Camera mode cycle ──
 const fpvOverlay   = document.getElementById('fpv-overlay');
+const pilotFrameOverlay = document.getElementById('pilot-frame-overlay');
 const btnCamToggle = document.getElementById('btn-cam-toggle');
+const cameraModeOrder = [
+  CAMERA_VIEW_MODES.CHASE,
+  CAMERA_VIEW_MODES.FPV,
+  CAMERA_VIEW_MODES.PILOT,
+  CAMERA_VIEW_MODES.PILOT_FRAME
+];
+
+function syncCameraUi() {
+  const isPilot = cameraViewMode === CAMERA_VIEW_MODES.PILOT || cameraViewMode === CAMERA_VIEW_MODES.PILOT_FRAME;
+  const isFpv = cameraViewMode === CAMERA_VIEW_MODES.FPV;
+  const showPilotFrame = isPilot && CAMERA_SETTINGS.pilotFrame;
+  btnCamToggle.classList.toggle('fpv-active', isFpv || isPilot);
+  btnCamToggle.title = isFpv ? 'Vista FPV' : isPilot ? 'Vista piloto' : 'Vista de seguimiento';
+  fpvOverlay.classList.remove('active');
+  if (pilotFrameOverlay) {
+    pilotFrameOverlay.classList.toggle('active', showPilotFrame);
+  }
+  if (cfgPilotFrame) {
+    cfgPilotFrame.checked = CAMERA_SETTINGS.pilotFrame;
+  }
+  if (cfgFpvBladeAid) {
+    cfgFpvBladeAid.checked = CAMERA_SETTINGS.fpvBladeCues;
+  }
+}
+
 btnCamToggle.addEventListener('click', () => {
-  setIsFPVMode(!isFPVMode);
-  if (isFPVMode) {
-    btnCamToggle.classList.add('fpv-active');
-    fpvOverlay.classList.add('active');
+  const currentIndex = cameraModeOrder.indexOf(cameraViewMode);
+  const nextMode = cameraModeOrder[(currentIndex + 1) % cameraModeOrder.length];
+  setCameraViewMode(nextMode);
+  setPilotFrame(nextMode === CAMERA_VIEW_MODES.PILOT_FRAME);
+  syncCameraUi();
+  if (cameraViewMode === CAMERA_VIEW_MODES.FPV) {
+    setIsFPVMode(true);
   } else {
-    btnCamToggle.classList.remove('fpv-active');
-    fpvOverlay.classList.remove('active');
+    setIsFPVMode(false);
   }
 });
+
+syncCameraUi();
 
 // ── Freestyle control panel buttons ──
 document.getElementById('btn-new-map').addEventListener('click', () => {

@@ -3,8 +3,10 @@
  */
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import { PERFORMANCE } from './state.js';
 
 export let scene, camera, renderer;
+export let fpvPipCamera;
 
 // Visual aid objects (exported for physics/loop to update)
 export let shadowDisc, shadowMat;
@@ -31,6 +33,35 @@ export let droneGroup;
 export let propGroups = [];
 export let motorLights = [];
 export let motorStartupTimer = 0;
+const performanceClouds = [];
+const performanceEnvironment = [];
+
+export function registerPerformanceObject(obj, kind = 'environment') {
+  if (!obj) return;
+  if (kind === 'cloud') {
+    performanceClouds.push(obj);
+  } else {
+    performanceEnvironment.push(obj);
+  }
+}
+
+export function updatePerformanceSettings() {
+  if (!renderer) return;
+  const lowPower = PERFORMANCE.lowPowerMode;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.0 : 1.25));
+  renderer.shadowMap.enabled = !lowPower && PERFORMANCE.shadows;
+
+  performanceClouds.forEach(obj => {
+    obj.visible = !lowPower && PERFORMANCE.environment;
+  });
+  performanceEnvironment.forEach(obj => {
+    obj.visible = !lowPower && PERFORMANCE.environment;
+  });
+
+  if (windParticles) {
+    windParticles.visible = !lowPower && PERFORMANCE.windParticles && !!scene?.fog;
+  }
+}
 
 // Setters for mutable primitives
 export function setYawArcStartAngle(v) { yawArcStartAngle = v; }
@@ -66,6 +97,7 @@ export function initScene() {
   const { w: initialW, h: initialH } = getViewportSize();
   scene    = new THREE.Scene();
   camera   = new THREE.PerspectiveCamera(60, initialW / initialH, 0.1, 1000);
+  fpvPipCamera = new THREE.PerspectiveCamera(75, 16 / 9, 0.05, 300);
 
   // ── Renderer with cinematic colour grading ──────────────────────────────
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
@@ -179,6 +211,7 @@ export function initScene() {
     const cloud = new THREE.Mesh(new THREE.PlaneGeometry(120, 50), cMat);
     cloud.position.set(cx, cy, cz);
     cloud.lookAt(0, cy, 0);
+    registerPerformanceObject(cloud, 'cloud');
     scene.add(cloud);
   });
 
@@ -342,10 +375,21 @@ export function initScene() {
   camera.position.set(0, 0.8, 2.2);
   camera.lookAt(0, 0.1, 0);
 
+<<<<<<< HEAD
   window.addEventListener('resize', applyViewportSize);
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', applyViewportSize);
   }
+=======
+  updatePerformanceSettings();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    updatePerformanceSettings();
+  });
+>>>>>>> testingv2
 }
 
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
@@ -378,6 +422,7 @@ function _buildEnvironment() {
     trunk.position.set(tx, trunkH / 2, tz);
     trunk.castShadow = true;
     trunk.receiveShadow = true;
+    registerPerformanceObject(trunk);
     scene.add(trunk);
 
     // Layered cone foliage (2 layers)
@@ -385,11 +430,13 @@ function _buildEnvironment() {
     const cone1 = new THREE.Mesh(new THREE.ConeGeometry(foliageR, treeH * 0.6, 7), fMat);
     cone1.position.set(tx, trunkH + treeH * 0.22, tz);
     cone1.castShadow = true;
+    registerPerformanceObject(cone1);
     scene.add(cone1);
 
     const cone2 = new THREE.Mesh(new THREE.ConeGeometry(foliageR * 0.65, treeH * 0.45, 7), fMat);
     cone2.position.set(tx, trunkH + treeH * 0.52, tz);
     cone2.castShadow = true;
+    registerPerformanceObject(cone2);
     scene.add(cone2);
   }
 
@@ -417,6 +464,7 @@ function _buildEnvironment() {
     wallMesh.position.y = wallH / 2;
     wallMesh.castShadow = true;
     wallMesh.receiveShadow = true;
+    registerPerformanceObject(wallMesh);
     houseGroup.add(wallMesh);
 
     // Roof (pyramid via ConeGeometry with 4 sides)
@@ -427,15 +475,18 @@ function _buildEnvironment() {
     roof.position.y = wallH + roofH / 2;
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
+    registerPerformanceObject(roof);
     houseGroup.add(roof);
 
     // Door
     const doorMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.9, 0.05), doorMat);
     door.position.set(0, 0.45, d / 2 + 0.01);
+    registerPerformanceObject(door);
     houseGroup.add(door);
 
     houseGroup.position.set(x, 0, z);
+    registerPerformanceObject(houseGroup);
     scene.add(houseGroup);
   });
 
@@ -454,6 +505,7 @@ function _buildEnvironment() {
     rock.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
     rock.castShadow = true;
     rock.receiveShadow = true;
+    registerPerformanceObject(rock);
     scene.add(rock);
   }
 
@@ -469,6 +521,7 @@ function _buildEnvironment() {
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.0, 6), postMat);
     post.position.set(fx, 0.5, fz);
     post.castShadow = true;
+    registerPerformanceObject(post);
     scene.add(post);
 
     // Wire between consecutive posts
@@ -479,12 +532,16 @@ function _buildEnvironment() {
       new THREE.Vector3(fx, 0.7, fz),
       new THREE.Vector3(nx, 0.7, nz)
     ]);
-    scene.add(new THREE.Line(wGeo, wireMat));
+    const fenceLine = new THREE.Line(wGeo, wireMat);
+    registerPerformanceObject(fenceLine);
+    scene.add(fenceLine);
     const wGeo2 = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(fx, 0.35, fz),
       new THREE.Vector3(nx, 0.35, nz)
     ]);
-    scene.add(new THREE.Line(wGeo2, wireMat));
+    const fenceLine2 = new THREE.Line(wGeo2, wireMat);
+    registerPerformanceObject(fenceLine2);
+    scene.add(fenceLine2);
   }
 }
 
@@ -500,19 +557,23 @@ function _buildDrone() {
     color: 0xf0f0f0, metalness: 0.3, roughness: 0.5
   });
   const baseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 0.04, 8), bodyMat);
+  baseMesh.userData.hideInFpv = true;
   baseMesh.castShadow = true;
   droneGroup.add(baseMesh);
 
   const topCap = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.018, 8), topCapMat);
+  topCap.userData.hideInFpv = true;
   topCap.position.y = 0.029;
   droneGroup.add(topCap);
 
   // Camera bump (front)
   const camMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.6, roughness: 0.3 });
   const camBump = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 0.04), camMat);
+  camBump.userData.hideInFpv = true;
   camBump.position.set(0, 0.01, -0.09);
   droneGroup.add(camBump);
   const lens = new THREE.Mesh(new THREE.CircleGeometry(0.012, 12), new THREE.MeshStandardMaterial({ color: 0x1a3a5c, metalness: 0.8, roughness: 0.1 }));
+  lens.userData.hideInFpv = true;
   lens.rotation.x = -Math.PI / 2 + 0.3;
   lens.position.set(0, 0.02, -0.112);
   droneGroup.add(lens);
@@ -528,6 +589,7 @@ function _buildDrone() {
   ];
   armDefs.forEach(({ x, z, mat, ry }) => {
     const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.015, 0.155, 8), mat);
+    arm.userData.hideInFpv = true;
     arm.rotation.set(0, ry, Math.PI / 2);
     arm.position.set(x, 0.005, z);
     droneGroup.add(arm);

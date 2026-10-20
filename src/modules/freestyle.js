@@ -36,7 +36,7 @@ export const FREESTYLE_WIND_PRESETS = {
 function rnd(min, max) { return min + Math.random() * (max - min); }
 function rndInt(min, max) { return Math.floor(rnd(min, max + 1)); }
 
-export function loadFreestyle() {
+function loadFreestyleBase(isIndoor = false) {
   clearLevel();
   setIsFreestyleMode(true);
   setFsGatesPassed(0);
@@ -51,7 +51,7 @@ export function loadFreestyle() {
   const wp = FREESTYLE_WIND_PRESETS[fsWindPreset];
   setWindVector(wp.dir.clone().multiplyScalar(wp.scale));
 
-  const numGates = rndInt(6, 9);
+  const numGates = isIndoor ? rndInt(7, 10) : rndInt(6, 9);
   const usedPositions = [];
   const newGates = [];
   for (let i = 0; i < numGates; i++) {
@@ -60,11 +60,11 @@ export function loadFreestyle() {
       x = rnd(-14, 14);
       z = rnd(-8, -40);
       tries++;
-    } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < 4));
+    } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < (isIndoor ? 3.1 : 4.0)));
     usedPositions.push([x, z]);
-    const y    = rnd(0.8, 3.0);
+    const y    = rnd(isIndoor ? 1.0 : 0.8, isIndoor ? 3.6 : 3.0);
     const rotY = rnd(-Math.PI, Math.PI);
-    const size = rnd(0.9, 1.5);
+    const size = rnd(isIndoor ? 0.95 : 0.9, isIndoor ? 1.35 : 1.5);
     const gate = createFlightGate(x, y, z, rotY, size);
     gate._passed = false;
     newGates.push(gate);
@@ -74,16 +74,16 @@ export function loadFreestyle() {
   const newObstacles = [...obstacles];
   const newLevelObjects = [...levelObjects];
 
-  const numPillars = rndInt(3, 5);
+  const numPillars = rndInt(isIndoor ? 5 : 3, isIndoor ? 8 : 5);
   for (let i = 0; i < numPillars; i++) {
     let x, z, tries = 0;
     do {
       x = rnd(-16, 16);
       z = rnd(-5, -42);
       tries++;
-    } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < 3));
+    } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < (isIndoor ? 2.2 : 3.0)));
     usedPositions.push([x, z]);
-    const h = rnd(1.5, 4.5);
+    const h = rnd(isIndoor ? 1.8 : 1.5, isIndoor ? 4.8 : 4.5);
     const r = rnd(0.15, 0.35);
     const pillar = new THREE.Mesh(
       new THREE.CylinderGeometry(r, r * 1.1, h, 12),
@@ -97,14 +97,14 @@ export function loadFreestyle() {
     newObstacles.push({ box: new THREE.Box3().setFromObject(pillar), mesh: pillar });
   }
 
-  const numBarrels = rndInt(2, 4);
+  const numBarrels = rndInt(isIndoor ? 3 : 2, isIndoor ? 6 : 4);
   for (let i = 0; i < numBarrels; i++) {
     let x, z, tries = 0;
     do {
       x = rnd(-14, 14);
       z = rnd(-6, -40);
       tries++;
-    } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < 2.5));
+    } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < (isIndoor ? 2.0 : 2.5)));
     usedPositions.push([x, z]);
     const barrel = new THREE.Mesh(
       new THREE.CylinderGeometry(0.45, 0.45, 0.9, 12),
@@ -118,17 +118,17 @@ export function loadFreestyle() {
     newObstacles.push({ box: new THREE.Box3().setFromObject(barrel), mesh: barrel });
   }
 
-  const numWalls = rndInt(1, 3);
+  const numWalls = rndInt(isIndoor ? 5 : 1, isIndoor ? 8 : 3);
   for (let i = 0; i < numWalls; i++) {
     let x, z, tries = 0;
     do {
       x = rnd(-13, 13);
       z = rnd(-7, -38);
       tries++;
-    } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < 3.5));
+    } while (tries < 20 && usedPositions.some(p => Math.hypot(x-p[0], z-p[1]) < (isIndoor ? 2.6 : 3.5)));
     usedPositions.push([x, z]);
-    const wl  = rnd(2.0, 5.0);
-    const wh  = rnd(0.8, 2.0);
+    const wl  = rnd(isIndoor ? 1.6 : 2.0, isIndoor ? 4.6 : 5.0);
+    const wh  = rnd(isIndoor ? 1.1 : 0.8, isIndoor ? 2.5 : 2.0);
     const rotY = rnd(0, Math.PI);
     const wall = new THREE.Mesh(
       new THREE.BoxGeometry(wl, wh, 0.18),
@@ -143,13 +143,42 @@ export function loadFreestyle() {
     newObstacles.push({ box: new THREE.Box3().setFromObject(wall), mesh: wall });
   }
 
+  if (isIndoor) {
+    const addWall = (x, y, z, w, h, d, color = 0x424242) => {
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color, roughness: 0.9 })
+      );
+      wall.position.set(x, y, z);
+      wall.castShadow = true;
+      scene.add(wall);
+      newLevelObjects.push(wall);
+      wall.updateWorldMatrix(true, false);
+      newObstacles.push({ box: new THREE.Box3().setFromObject(wall), mesh: wall });
+    };
+
+    // Indoor hall shell
+    addWall(0, 1.4, -24, 30, 2.8, 0.5);
+    addWall(0, 1.4, -2, 30, 2.8, 0.5);
+    addWall(-15, 1.4, -13, 0.5, 2.8, 22);
+    addWall(15, 1.4, -13, 0.5, 2.8, 22);
+
+    // Ceiling beams to force vertical control without fully blocking routes
+    const beamCount = rndInt(3, 5);
+    for (let i = 0; i < beamCount; i++) {
+      const bz = rnd(-36, -8);
+      const bx = rnd(-10, 10);
+      addWall(bx, rnd(2.6, 3.2), bz, rnd(3.0, 6.0), 0.22, 0.22, 0x5d4037);
+    }
+  }
+
   setLevelObjects(newLevelObjects);
   setObstacles(newObstacles);
 
-  const numSlick = rndInt(1, 2);
+  const numSlick = rndInt(isIndoor ? 2 : 1, isIndoor ? 3 : 2);
   const newSlick = [...levelSlickZones];
   for (let i = 0; i < numSlick; i++) {
-    newSlick.push(createSlickZone(rnd(-8, 8), rnd(-10, -30), rnd(4, 7), rnd(4, 7)));
+    newSlick.push(createSlickZone(rnd(-8, 8), rnd(-10, -30), rnd(isIndoor ? 3.5 : 4, 7), rnd(isIndoor ? 3.5 : 4, 7)));
   }
   setLevelSlickZones(newSlick);
 
@@ -165,6 +194,14 @@ export function loadFreestyle() {
   document.getElementById('freestyle-hud').style.display  = 'block';
   document.getElementById('freestyle-panel').style.display = 'flex';
   updateFreestyleHUD();
+}
+
+export function loadFreestyle() {
+  loadFreestyleBase(false);
+}
+
+export function loadIndoorFreestyle() {
+  loadFreestyleBase(true);
 }
 
 export function updateFreestyleHUD() {

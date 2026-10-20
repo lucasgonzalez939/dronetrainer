@@ -3,6 +3,8 @@
  *               score/star system, hint display, and flight-path recording.
  */
 
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+
 import {
   drone, FlightState,
   missions, currentMissionIdx, setCurrentMissionIdx,
@@ -11,16 +13,19 @@ import {
   levelLandingPad,
   currentLevel, setCurrentLevel,
   isFreestyleMode,
+  softCheckpoints, activeSoftCheckpointIdx, activeRespawnCheckpoint,
   gateScores, setGateScores,
   levelStars, setLevelStars,
   hintRetries, setHintRetries,
   replayBuffer, setReplayBuffer,
   replaySample, setReplaySample,
-  setLevelBestTime, levelBestTimes
+  setLevelBestTime, levelBestTimes,
+  setActiveSoftCheckpointIdx, setActiveRespawnCheckpoint
 } from './state.js';
 import { LEVEL_DEFS } from './levels.js';
 import { unlockNextLevel } from './progress.js';
 import { showLevelOverlay } from './overlays.js';
+import { setFlightState } from './flightState.js';
 
 const missionTitleEl = document.getElementById('mission-title');
 const missionDescEl  = document.getElementById('mission-desc');
@@ -59,6 +64,8 @@ export function updateMissionLogic(dt) {
   }
 
   if (currentMissionIdx < missions.length) {
+    _updateSoftCheckpointProgress();
+
     const m = missions[currentMissionIdx];
     if (m.check && m.check()) {
       // ── Score this gate pass ────────────────────────────────────────────
@@ -86,6 +93,54 @@ export function updateMissionLogic(dt) {
       }
     }
   }
+}
+
+function _updateSoftCheckpointProgress() {
+  if (!softCheckpoints.length) return;
+
+  for (let i = 0; i < softCheckpoints.length; i++) {
+    if (i <= activeSoftCheckpointIdx) continue;
+    const cp = softCheckpoints[i];
+    if (!cp || !cp.check) continue;
+
+    if (cp.check(0.6)) {
+      cp.setActivated && cp.setActivated();
+      setActiveSoftCheckpointIdx(i);
+      setActiveRespawnCheckpoint({
+        pos: cp.center.clone().add(new THREE.Vector3(0, 0.08, 0)),
+        yaw: drone.yaw
+      });
+      if (missionHintEl) {
+        missionHintEl.textContent = '🧩 Checkpoint guardado';
+        missionHintEl.style.display = 'block';
+        setTimeout(() => {
+          if (missionHintEl.textContent === '🧩 Checkpoint guardado') {
+            missionHintEl.style.display = 'none';
+          }
+        }, 1200);
+      }
+      break;
+    }
+  }
+}
+
+export function tryRespawnFromSoftCheckpoint() {
+  if (!activeRespawnCheckpoint || isFreestyleMode) return false;
+
+  const { pos, yaw } = activeRespawnCheckpoint;
+  if (!pos) return false;
+
+  drone.pos.copy(pos);
+  drone.vel.set(0, 0, 0);
+  drone.yaw = Number.isFinite(yaw) ? yaw : drone.yaw;
+  drone.yawRate = 0;
+  drone.pitch = 0;
+  drone.roll = 0;
+  drone.pitchRate = 0;
+  drone.rollRate = 0;
+
+  setFlightState(FlightState.LANDED);
+  return true;
 }
 
 // ── Hint management ──────────────────────────────────────────────────────
