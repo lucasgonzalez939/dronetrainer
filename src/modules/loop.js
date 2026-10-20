@@ -2,7 +2,7 @@
  * loop.js – Main requestAnimationFrame game loop.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from '../vendor/three.module.js';
 import { scene, camera, renderer, fpvPipCamera, droneGroup } from './scene.js';
 import {
   FlightState, DIFFICULTY, CAMERA_SETTINGS, CAMERA_VIEW_MODES,

@@ -2,7 +2,7 @@
  * scene.js – Three.js scene, renderer, camera, environment, drone mesh.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from '../vendor/three.module.js';
 import { PERFORMANCE } from './state.js';
 
 export let scene, camera, renderer;

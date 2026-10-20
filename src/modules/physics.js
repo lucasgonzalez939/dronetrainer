@@ -2,7 +2,7 @@
  * physics.js – Flight physics, collision detection, and visual aid updates.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from '../vendor/three.module.js';
 import {
   FlightState, CONFIG, DIFFICULTY, PERFORMANCE, CAMERA_SETTINGS, CAMERA_VIEW_MODES, PILOT_CAMERA_SPOTS,
   drone, rawInput, filteredInput, crashAngVel,

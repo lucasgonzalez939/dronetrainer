@@ -4,7 +4,7 @@
  * network fallback during fetch.
  */
 
-const CACHE_NAME = 'dronetrainer-v1';
+const CACHE_NAME = 'dronetrainer-v2';
 
 // All assets to precache on install
 const PRECACHE_URLS = [
@@ -14,6 +14,7 @@ const PRECACHE_URLS = [
   '/dronetrainer/icons/icon-192.png',
   '/dronetrainer/icons/icon-512.png',
   '/dronetrainer/src/main.js',
+  '/dronetrainer/src/vendor/three.module.js',
   '/dronetrainer/src/styles/base.css',
   '/dronetrainer/src/styles/hud.css',
   '/dronetrainer/src/styles/joystick.css',
@@ -32,9 +33,6 @@ const PRECACHE_URLS = [
   '/dronetrainer/src/modules/overlays.js',
   '/dronetrainer/src/modules/progress.js',
   '/dronetrainer/src/modules/loop.js'
-  // Note: the Three.js CDN URL is NOT precached here to avoid failing
-  // installation when the CDN is unreachable. It is cached lazily by
-  // the fetch handler on first successful network request.
 ];
 
 // Install: precache all listed assets

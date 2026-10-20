@@ -3,7 +3,7 @@
  *               score/star system, hint display, and flight-path recording.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from '../vendor/three.module.js';
 
 import {
   drone, FlightState,

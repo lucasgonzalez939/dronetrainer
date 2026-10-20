@@ -2,7 +2,7 @@
  * gates.js – Gate / landing pad / slick zone / waypoint / orbit creation and gate-pass detection.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from '../vendor/three.module.js';
 import { scene } from './scene.js';
 import {
   levelObjects, setLevelObjects,
