@@ -77,17 +77,34 @@ function seededRand(seed) {
   };
 }
 
+function syncRendererSize() {
+  const container = document.getElementById('canvas-container');
+  if (!container || !renderer || !camera) return;
+
+  const rect = container.getBoundingClientRect();
+  const width = Math.max(1, rect.width || window.innerWidth || 1);
+  const height = Math.max(1, rect.height || window.innerHeight || 1);
+  const viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const renderWidth = Math.max(1, Math.min(width, viewportWidth || width));
+  const renderHeight = Math.max(1, Math.min(height, viewportHeight || height));
+
+  camera.aspect = renderWidth / renderHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(renderWidth, renderHeight, false);
+}
+
 export function initScene() {
   const container = document.getElementById('canvas-container');
   scene    = new THREE.Scene();
-  camera   = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera   = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
   fpvPipCamera = new THREE.PerspectiveCamera(75, 16 / 9, 0.05, 300);
 
   // ── Renderer with cinematic colour grading ──────────────────────────────
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-  renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
   renderer.shadowMap.enabled = true;
+  syncRendererSize();
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
@@ -362,12 +379,16 @@ export function initScene() {
 
   updatePerformanceSettings();
 
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  const handleViewportResize = () => {
+    syncRendererSize();
     updatePerformanceSettings();
-  });
+  };
+
+  window.addEventListener('resize', handleViewportResize, { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleViewportResize, { passive: true });
+    window.visualViewport.addEventListener('scroll', handleViewportResize, { passive: true });
+  }
 }
 
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
