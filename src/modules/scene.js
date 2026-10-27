@@ -133,12 +133,11 @@ export function initScene() {
   renderer.shadowMap.enabled = false;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
-  // outputColorSpace is the current API (Three.js r152+); fall back to the
-  // legacy outputEncoding for older builds (r128 used here via CDN).
+
   if (THREE.SRGBColorSpace !== undefined) {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
   } else {
-    renderer.outputEncoding = THREE.sRGBEncoding; // eslint-disable-line
+    renderer.outputEncoding = THREE.sRGBEncoding;
   }
   if (container) container.appendChild(renderer.domElement);
 
@@ -164,7 +163,6 @@ export function initScene() {
     void main() {
       float h = normalize(vWorldPosition).y;
       if (h >= 0.0) {
-        // above horizon: blend haze band near 0 then sweep up to top
         float t = max(pow(h, exponent), 0.0);
         vec3 upper = mix(hazeColor, topColor, t);
         gl_FragColor = vec4(mix(horizonColor, upper, min(h * 6.0, 1.0)), 1.0);
@@ -176,10 +174,10 @@ export function initScene() {
   const skyMat = new THREE.ShaderMaterial({
     vertexShader, fragmentShader,
     uniforms: {
-      topColor:     { value: new THREE.Color(0x3a7bd5) },   // deep blue zenith
-      hazeColor:    { value: new THREE.Color(0xe8a87c) },   // golden haze mid-sky
-      horizonColor: { value: new THREE.Color(0xf5c892) },   // warm peach horizon
-      bottomColor:  { value: new THREE.Color(0x3b5e3a) },   // dark green underside
+      topColor:     { value: new THREE.Color(0x3a7bd5) },
+      hazeColor:    { value: new THREE.Color(0xe8a87c) },
+      horizonColor: { value: new THREE.Color(0xf5c892) },
+      bottomColor:  { value: new THREE.Color(0x3b5e3a) },
       exponent:     { value: 0.45 }
     },
     side: THREE.BackSide,
@@ -200,7 +198,6 @@ export function initScene() {
   sunDisc.lookAt(0, 0, 0);
   outdoorGroup.add(sunDisc);
 
-  // Sun glow halo
   const haloMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.18, fog: false, side: THREE.DoubleSide });
   const halo = new THREE.Mesh(new THREE.CircleGeometry(30, 32), haloMat);
   halo.position.copy(sunDisc.position);
@@ -225,7 +222,6 @@ export function initScene() {
       vec2 uv = vUv * 4.0;
       float n = noise(uv)*0.5 + noise(uv*2.1)*0.25 + noise(uv*4.3)*0.125;
       float mask = smoothstep(0.38, 0.62, n);
-      // fade at edges
       float edge = min(min(vUv.x,1.0-vUv.x), min(vUv.y,1.0-vUv.y)) * 6.0;
       mask *= clamp(edge, 0.0, 1.0);
       if (mask < 0.05) discard;
@@ -253,8 +249,6 @@ export function initScene() {
   const sun = new THREE.DirectionalLight(0xfff0cc, 1.1);
   sun.position.set(40, 60, 30);
   scene.add(sun);
-
-  // Ambient fill light for warmer feel
   scene.add(new THREE.AmbientLight(0xffd580, 0.2));
 
   // ── Ground – richer grass green with ShaderMaterial ──────────────────────
@@ -271,8 +265,8 @@ export function initScene() {
     }
     void main(){
       float n = noise(vUv*80.0)*0.5 + noise(vUv*200.0)*0.25;
-      vec3 colA = vec3(0.29, 0.49, 0.25);  // bright grass
-      vec3 colB = vec3(0.18, 0.32, 0.15);  // dark grass
+      vec3 colA = vec3(0.29, 0.49, 0.25);
+      vec3 colB = vec3(0.18, 0.32, 0.15);
       gl_FragColor = vec4(mix(colA, colB, n), 1.0);
     }
   `;
@@ -297,7 +291,7 @@ export function initScene() {
   startPad.position.set(0, 0.025, 0);
   outdoorGroup.add(startPad);
 
-  // H marker bars (cross shape)
+  // H marker bars
   const hMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   [
     { sx: 0.06, sz: 0.32, px: -0.18, pz: 0 },
@@ -355,7 +349,7 @@ export function initScene() {
   altRing    = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.006, 8, 32), altRingMat);
   scene.add(altRing);
 
-  // ── Wind particles (larger count, varied sizes via scale) ─────────────────
+  // ── Wind particles ────────────────────────────────────────────────────────
   for (let i = 0; i < WIND_PARTICLE_COUNT; i++) {
     windParticlePositions[i*3+0] = (Math.random() - 0.5) * 40;
     windParticlePositions[i*3+1] = Math.random() * 5.0 + 0.2;
@@ -396,6 +390,7 @@ export function initScene() {
     window.visualViewport.addEventListener('resize', handleResize);
   }
 }
+
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
 function _buildEnvironment() {
   const rand = seededRand(42);
@@ -646,22 +641,17 @@ function _buildDrone() {
   const bladeMat = new THREE.MeshBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.88, side: THREE.DoubleSide });
 
   propGroups = propPositions.map(([x, y, z]) => {
-    // Motor cylinder
     const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.018, 12), motorMat);
     motor.position.set(x, y - 0.005, z);
     droneGroup.add(motor);
 
-    // Propeller group
     const g = new THREE.Group();
 
-    // Disc (more segments for smoothness)
     const disc = new THREE.Mesh(new THREE.CircleGeometry(0.058, 32), propMat);
     disc.rotation.x = Math.PI / 2;
     g.add(disc);
 
-    // Ellipse blades
     [-1, 1].forEach(sign => {
-      // Build an ellipse curve for blade shape
       const curve = new THREE.EllipseCurve(0, 0, 0.050, 0.009, 0, Math.PI * 2, false, 0);
       const pts   = curve.getPoints(20);
       const shape = new THREE.Shape(pts);
@@ -678,12 +668,12 @@ function _buildDrone() {
     return g;
   });
 
-  // LED lights: emissive spheres (red=front, green=rear)
+  // LED lights: emissive spheres
   const ledDefs = [
-    { pos: [ 0.115, 0.024,  0.115], color: 0x00ff44 },   // rear-right  green
-    { pos: [-0.115, 0.024,  0.115], color: 0x00ff44 },   // rear-left   green
-    { pos: [ 0.115, 0.024, -0.115], color: 0xff2200 },   // front-right red
-    { pos: [-0.115, 0.024, -0.115], color: 0xff2200 },   // front-left  red
+    { pos: [ 0.115, 0.024,  0.115], color: 0x00ff44 },
+    { pos: [-0.115, 0.024,  0.115], color: 0x00ff44 },
+    { pos: [ 0.115, 0.024, -0.115], color: 0xff2200 },
+    { pos: [-0.115, 0.024, -0.115], color: 0xff2200 },
   ];
   const ledMeshes = [];
   ledDefs.forEach(({ pos, color }) => {
@@ -694,7 +684,6 @@ function _buildDrone() {
     ledMeshes.push(led);
   });
 
-  // Motor lights (virtual proxies to avoid expensive PointLights on mobile)
   motorLights = ledMeshes.map(led => ({
     intensity: 0,
     _led: led
