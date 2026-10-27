@@ -4,7 +4,7 @@
  * falls back to Cache for complete offline functionality.
  */
 
-const CACHE_NAME = 'dronetrainer-v2.2.0';
+const CACHE_NAME = 'dronetrainer-v2.3.0';
 
 // Base path detection (supports both /dronetrainer/ and /)
 const BASE = self.registration.scope.endsWith('/')
@@ -31,6 +31,36 @@ const RELATIVE_ASSETS = [
   'src/modules/physics.js',
   'src/modules/joystick.js',
   'src/modules/levels.js',
+  'src/modules/levels/index.js',
+  'src/modules/levels/common.js',
+  'src/modules/levels/academy/level-01.js',
+  'src/modules/levels/academy/level-02.js',
+  'src/modules/levels/academy/level-03.js',
+  'src/modules/levels/academy/level-04.js',
+  'src/modules/levels/academy/level-05.js',
+  'src/modules/levels/academy/level-06.js',
+  'src/modules/levels/academy/level-07.js',
+  'src/modules/levels/academy/level-08.js',
+  'src/modules/levels/academy/level-09.js',
+  'src/modules/levels/academy/level-10.js',
+  'src/modules/levels/academy/level-11.js',
+  'src/modules/levels/academy/level-12.js',
+  'src/modules/levels/academy/level-13.js',
+  'src/modules/levels/academy/level-14.js',
+  'src/modules/levels/academy/level-15.js',
+  'src/modules/levels/academy/level-16.js',
+  'src/modules/levels/academy/level-17.js',
+  'src/modules/levels/academy/level-18.js',
+  'src/modules/levels/challenges/challenge-01.js',
+  'src/modules/levels/challenges/challenge-02.js',
+  'src/modules/levels/challenges/challenge-03.js',
+  'src/modules/levels/challenges/challenge-04.js',
+  'src/modules/levels/challenges/challenge-05.js',
+  'src/modules/levels/challenges/challenge-06.js',
+  'src/modules/levels/challenges/challenge-07.js',
+  'src/modules/levels/challenges/challenge-08.js',
+  'src/modules/levels/challenges/challenge-09.js',
+  'src/modules/levels/challenges/challenge-10.js',
   'src/modules/gates.js',
   'src/modules/freestyle.js',
   'src/modules/missions.js',

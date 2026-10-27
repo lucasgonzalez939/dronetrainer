@@ -40,6 +40,8 @@ export function showLevelOverlay(idx, isTransition) {
   const def = LEVEL_DEFS[idx];
   if (!def) return;
 
+  setCurrentLevel(idx);
+
   if (def.isChallenge) {
     currentTab = 'challenges';
   } else {
@@ -50,7 +52,8 @@ export function showLevelOverlay(idx, isTransition) {
   ovSubtitle.textContent   = def.subtitle;
   ovDesc.textContent       = def.desc;
 
-  let objectivesHtml = def.objectives.map(o => `<li>${o}</li>`).join('');
+  const objectives = Array.isArray(def.objectives) ? def.objectives : [];
+  let objectivesHtml = objectives.map(o => `<li>${o}</li>`).join('');
 
   // Show medal times if defined
   if (def.medalTimes) {

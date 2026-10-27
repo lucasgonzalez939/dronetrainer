@@ -1,5 +1,5 @@
 {
-  "version": "2.2.0",
-  "buildTime": 1740656000000,
-  "description": "Físicas corregidas, 28 niveles con modo Desafío, menú por pestañas y actualización automática offline/PWA."
+  "version": "2.3.0",
+  "buildTime": 1740660000000,
+  "description": "Niveles modularizados en carpetas individuales, corrección y objetivos del Modo Desafío, y precaché offline completo."
 }
