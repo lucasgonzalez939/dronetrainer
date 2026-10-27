@@ -2,7 +2,7 @@
  * loop.js – Main requestAnimationFrame game loop.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from './three.js';
 import { scene, camera, renderer, fpvPipCamera, droneGroup } from './scene.js';
 import {
   FlightState, DIFFICULTY, CAMERA_SETTINGS, CAMERA_VIEW_MODES,
@@ -16,16 +16,44 @@ import {
 } from './state.js';
 import { updateFlightPhysics } from './physics.js';
 import { updateMovingGate } from './levels.js';
-import { updateMissionLogic, checkMissionLanding } from './missions.js';
+import { updateMissionLogic, checkMissionLanding, getCurrentTargetPos } from './missions.js';
 import { updateFreestyleLogic } from './freestyle.js';
 import { updateSpeedTape, updateCompass, updateHorizon, updateDriftIndicator, updateInputViz, updateBatteryBar } from './hud.js';
 import { setFlightState } from './flightState.js';
+import { pollGamepad } from './joystick.js';
 
 const clock      = new THREE.Clock();
 const fpvOverlay = document.getElementById('fpv-overlay');
-const propBlades = fpvOverlay.querySelectorAll('.fpv-prop-blade');
+const propBlades = fpvOverlay ? fpvOverlay.querySelectorAll('.fpv-prop-blade') : [];
 const statusSpeed = document.getElementById('status-speed');
 const statusAlt   = document.getElementById('status-alt');
+
+// Fixed physics timestep configuration
+const FIXED_DT = 1 / 60;
+const MAX_PHYSICS_STEPS = 4;
+let physicsAccumulator = 0;
+
+// Pause state handling
+let isPaused = false;
+export function setPaused(v) {
+  isPaused = !!v;
+  if (!isPaused) {
+    clock.getDelta(); // flush delta so resume doesn't produce huge step
+    physicsAccumulator = 0;
+  }
+}
+export function getPaused() {
+  return isPaused;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    setPaused(true);
+  } else {
+    setPaused(false);
+  }
+});
+
 // 20 Hz HUD refresh keeps overlays responsive while cutting per-frame canvas work.
 const HUD_STEP = 1 / 20;
 let hudTimer = 0;
@@ -114,42 +142,60 @@ export function startLoop() {
 
   function loop() {
     requestAnimationFrame(loop);
-    const dt          = Math.min(clock.getDelta(), 0.1);
+
+    const rawDt = clock.getDelta();
+    if (isPaused) return;
+
+    const dt = Math.min(rawDt, 0.1);
     const elapsedTime = clock.getElapsedTime();
 
-    // Battery countdown
-    if (DIFFICULTY.batteryOn && batteryTimeLeft > 0 &&
-        (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF)) {
-      const newTime = batteryTimeLeft - dt;
-      setBatteryTimeLeft(Math.max(0, newTime));
-      updateBatteryBar(newTime, DIFFICULTY.batteryTime);
-      if (newTime <= 0 && !batteryDepleted) {
-        setBatteryDepleted(true);
-        setFlightState(FlightState.LANDING);
+    // Poll physical gamepads on each animation frame
+    pollGamepad();
+
+    // Fixed-timestep physics simulation
+    physicsAccumulator += dt;
+    let pSteps = 0;
+    while (physicsAccumulator >= FIXED_DT && pSteps < MAX_PHYSICS_STEPS) {
+      // Battery countdown
+      if (DIFFICULTY.batteryOn && batteryTimeLeft > 0 &&
+          (drone.state === FlightState.FLYING || drone.state === FlightState.TAKING_OFF)) {
+        const newTime = Math.max(0, batteryTimeLeft - FIXED_DT);
+        setBatteryTimeLeft(newTime);
+        if (newTime <= 0 && !batteryDepleted) {
+          setBatteryDepleted(true);
+          setFlightState(FlightState.LANDING);
+        }
       }
+
+      // Moving obstacles (sine-driven lateral motion)
+      movingObstacles.forEach(mo => {
+        if (!mo.mesh) return;
+        const newX = mo.originX + Math.sin(elapsedTime * mo.speed) * mo.amplitude;
+        mo.mesh.position.x = newX;
+        mo.center && (mo.center.x = newX);
+        mo.mesh.updateWorldMatrix(true, false);
+        if (mo.box) mo.box.setFromObject(mo.mesh);
+      });
+
+      updateMovingGate(elapsedTime);
+      updateFlightPhysics(FIXED_DT, elapsedTime, isFPVMode, currentLevel);
+
+      if (isFreestyleMode) {
+        updateFreestyleLogic(FIXED_DT);
+      } else {
+        updateMissionLogic(FIXED_DT);
+        // Check landing after physics (drone may have just landed)
+        if (drone.state === FlightState.LANDED) {
+          checkMissionLanding();
+        }
+      }
+
+      physicsAccumulator -= FIXED_DT;
+      pSteps++;
     }
 
-    // Moving obstacles (sine-driven lateral motion)
-    movingObstacles.forEach(mo => {
-      if (!mo.mesh) return;
-      const newX = mo.originX + Math.sin(elapsedTime * mo.speed) * mo.amplitude;
-      mo.mesh.position.x = newX;
-      mo.center && (mo.center.x = newX);
-      mo.mesh.updateWorldMatrix(true, false);
-      if (mo.box) mo.box.setFromObject(mo.mesh);
-    });
-
-    updateMovingGate(elapsedTime);
-    updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel);
-
-    if (isFreestyleMode) {
-      updateFreestyleLogic(dt);
-    } else {
-      updateMissionLogic(dt);
-      // Check landing after physics (drone may have just landed)
-      if (drone.state === FlightState.LANDED) {
-        checkMissionLanding();
-      }
+    if (pSteps >= MAX_PHYSICS_STEPS) {
+      physicsAccumulator = 0; // prevent spiral of death on severe lag spikes
     }
 
     // ── Replay ghost playback ────────────────────────────────────────────
@@ -233,7 +279,22 @@ export function startLoop() {
         lastStatusAlt = nextStatusAlt;
       }
       updateSpeedTape(speed);
-      updateCompass(drone.yaw);
+
+      // Target direction and distance for navigation assistance
+      let targetAngle = null;
+      let targetDist = null;
+      const targetPos = getCurrentTargetPos();
+      if (targetPos) {
+        const dx = targetPos.x - drone.pos.x;
+        const dz = targetPos.z - drone.pos.z;
+        targetDist = Math.hypot(dx, dz);
+        targetAngle = Math.atan2(dx, -dz);
+      }
+      updateCompass(drone.yaw, targetAngle, targetDist);
+
+      if (DIFFICULTY.batteryOn) {
+        updateBatteryBar(batteryTimeLeft, DIFFICULTY.batteryTime);
+      }
       //updateHorizon(drone.pitch, drone.roll);
       //updateDriftIndicator(!drone.vpsActive);
       //updateInputViz();

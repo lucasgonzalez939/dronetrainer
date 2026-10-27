@@ -35,7 +35,7 @@ export function updateSpeedTape(speedH) {
   }
 }
 
-export function updateCompass(yawRad) {
+export function updateCompass(yawRad, targetAngle = null, targetDist = null) {
   const w = 80, h = 44, cx = 40, cy = 28, r = 17;
   compassCtx.clearRect(0, 0, w, h);
   compassCtx.beginPath();
@@ -43,6 +43,25 @@ export function updateCompass(yawRad) {
   compassCtx.strokeStyle = 'rgba(255,255,255,0.14)';
   compassCtx.lineWidth = 1.25;
   compassCtx.stroke();
+
+  // Draw target waypoint indicator on compass rim
+  if (targetAngle !== null) {
+    const relTarget = targetAngle - yawRad;
+    const tx = cx + Math.sin(relTarget) * (r - 1);
+    const ty = cy - Math.cos(relTarget) * (r - 1);
+
+    compassCtx.save();
+    compassCtx.translate(tx, ty);
+    compassCtx.rotate(relTarget);
+    compassCtx.beginPath();
+    compassCtx.moveTo(0, -4);
+    compassCtx.lineTo(3.5, 3);
+    compassCtx.lineTo(-3.5, 3);
+    compassCtx.closePath();
+    compassCtx.fillStyle = '#00ffcc';
+    compassCtx.fill();
+    compassCtx.restore();
+  }
 
   const cards = [['N', 0], ['E', Math.PI/2], ['S', Math.PI], ['W', -Math.PI/2]];
   cards.forEach(([label, angle]) => {
@@ -65,12 +84,20 @@ export function updateCompass(yawRad) {
   compassCtx.fill();
 
   const deg = (((yawRad * 180 / Math.PI) % 360) + 360) % 360;
-  compassCtx.fillStyle = 'rgba(255,255,255,0.8)';
+  compassCtx.fillStyle = 'rgba(255,255,255,0.85)';
   compassCtx.font = 'bold 7px Arial';
   compassCtx.textAlign = 'center';
   compassCtx.textBaseline = 'middle';
-  compassCtx.fillText('HDG', cx, 8);
-  compassCtx.fillText(Math.round(deg) + '°', cx, 16);
+
+  if (targetDist !== null && targetDist > 0.05) {
+    const distStr = targetDist < 10 ? targetDist.toFixed(1) + 'm' : Math.round(targetDist) + 'm';
+    compassCtx.fillText('HDG ' + Math.round(deg) + '°', cx, 6);
+    compassCtx.fillStyle = '#00ffcc';
+    compassCtx.fillText(distStr, cx, 14);
+  } else {
+    compassCtx.fillText('HDG', cx, 6);
+    compassCtx.fillText(Math.round(deg) + '°', cx, 14);
+  }
 }
 
 export function updateHorizon(pitch, roll) {

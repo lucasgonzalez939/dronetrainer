@@ -3,14 +3,14 @@
  *               score/star system, hint display, and flight-path recording.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from './three.js';
 
 import {
   drone, FlightState,
   missions, currentMissionIdx, setCurrentMissionIdx,
   missionTimer, setMissionTimer,
   timerRunning, setTimerRunning,
-  levelLandingPad,
+  levelLandingPad, levelGates,
   currentLevel, setCurrentLevel,
   isFreestyleMode,
   softCheckpoints, activeSoftCheckpointIdx, activeRespawnCheckpoint,
@@ -23,7 +23,7 @@ import {
   setActiveSoftCheckpointIdx, setActiveRespawnCheckpoint
 } from './state.js';
 import { LEVEL_DEFS } from './levels.js';
-import { unlockNextLevel } from './progress.js';
+import { unlockNextLevel, saveLevelResult, loadProgress } from './progress.js';
 import { showLevelOverlay } from './overlays.js';
 import { setFlightState } from './flightState.js';
 
@@ -53,13 +53,14 @@ export function updateMissionLogic(dt) {
     if (missionTimerEl) missionTimerEl.textContent = `TIEMPO: ${mins.toString().padStart(2,'0')}:${secs.padStart(4,'0')}`;
   }
 
-  // Record flight path for replay
+  // Record flight path for replay (mutates existing array instead of copying)
   if (timerRunning && drone.state === FlightState.FLYING) {
     const newSample = replaySample + dt;
     setReplaySample(newSample);
     if (newSample >= REPLAY_SAMPLE_INTERVAL) {
       setReplaySample(0);
-      setReplayBuffer([...replayBuffer, { x: drone.pos.x, y: drone.pos.y, z: drone.pos.z }]);
+      replayBuffer.push({ x: drone.pos.x, y: drone.pos.y, z: drone.pos.z });
+      if (replayBuffer.length > 2000) replayBuffer.shift();
     }
   }
 
@@ -215,14 +216,34 @@ function _computeStars(levelIdx, finalTime) {
   }
   setLevelStars(stars);
 
-  // Update best time
+  // Update best time and persist
   if (!levelBestTimes[levelIdx] || finalTime < levelBestTimes[levelIdx]) {
     setLevelBestTime(levelIdx, finalTime);
   }
+  saveLevelResult(levelIdx, finalTime, stars);
 }
 
 export function getLevelStarsText() {
   return '⭐'.repeat(levelStars) + '☆'.repeat(3 - levelStars);
+}
+
+export function getCurrentTargetPos() {
+  if (currentMissionIdx >= missions.length) {
+    return levelLandingPad && levelLandingPad.center ? levelLandingPad.center : null;
+  }
+  const m = missions[currentMissionIdx];
+  if (m && m.target) return m.target;
+
+  if (levelGates && currentMissionIdx < levelGates.length && levelGates[currentMissionIdx]?.center) {
+    return levelGates[currentMissionIdx].center;
+  }
+  if (softCheckpoints && currentMissionIdx < softCheckpoints.length && softCheckpoints[currentMissionIdx]?.center) {
+    return softCheckpoints[currentMissionIdx].center;
+  }
+  if (levelLandingPad && levelLandingPad.center) {
+    return levelLandingPad.center;
+  }
+  return null;
 }
 
 export function showCompletionOverlay() {

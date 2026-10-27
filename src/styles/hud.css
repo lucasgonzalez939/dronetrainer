@@ -175,26 +175,29 @@
 }
 .top-media-btn svg { width:20px; height:20px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
 
-/* Record/photo button */
-#btn-record {
-  width: 48px;
-  height: 48px;
+/* Fullscreen button */
+#btn-fullscreen {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.85);
-  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.6);
+  background: transparent;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   pointer-events: auto;
-  cursor: default;
-  opacity: 0.55;
+  cursor: pointer;
+  transition: border-color 0.2s, opacity 0.2s;
 }
-#btn-record-inner {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.7);
+#btn-fullscreen svg {
+  width: 20px;
+  height: 20px;
+  fill: #fff;
+}
+#btn-fullscreen:active {
+  opacity: 0.7;
 }
 
 /* Mission HUD – centred below top bar */

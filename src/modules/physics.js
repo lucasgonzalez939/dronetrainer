@@ -2,7 +2,7 @@
  * physics.js – Flight physics, collision detection, and visual aid updates.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from './three.js';
 import {
   FlightState, CONFIG, DIFFICULTY, PERFORMANCE, CAMERA_SETTINGS, CAMERA_VIEW_MODES, PILOT_CAMERA_SPOTS,
   drone, rawInput, filteredInput, crashAngVel,
@@ -40,6 +40,18 @@ const _pilotTargetDir = new THREE.Vector3();
 const _pilotFallbackDir = new THREE.Vector3();
 const _pilotLookTarget = new THREE.Vector3();
 let pilotLookDir = null;
+
+// Reusable scratch vectors to avoid per-frame GC allocations
+const _thrustWorld = new THREE.Vector3();
+const _forward = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _targetWorldVel = new THREE.Vector3();
+const _lookTarget = new THREE.Vector3();
+const _camOffset = new THREE.Vector3();
+const _targetCamPos = new THREE.Vector3();
+const _upAxis = new THREE.Vector3(0, 1, 0);
+const _currentWind = new THREE.Vector3();
+const _turbForce = new THREE.Vector3();
 
 // Wind shear altitude bands: { maxAlt, dirMult }
 // Each band overrides wind direction scale based on drone altitude
@@ -188,13 +200,13 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
     }
   }
 
-  const currentWind = windVector.clone()
+  _currentWind.copy(windVector)
     .multiplyScalar((1.0 + gust) * windMult * shearMult * effectiveBurstMult);
 
-  const turbForce = new THREE.Vector3(0, 0, 0);
+  _turbForce.set(0, 0, 0);
   if (DIFFICULTY.turbOn && drone.state === FlightState.FLYING) {
     const t = elapsedTime;
-    turbForce.set(
+    _turbForce.set(
       (Math.sin(t * 7.3) + Math.sin(t * 3.1)) * 0.5 * DIFFICULTY.turbStrength * 0.4,
       (Math.sin(t * 5.7) + Math.sin(t * 2.9)) * 0.25 * DIFFICULTY.turbStrength * 0.3,
       (Math.sin(t * 6.1) + Math.sin(t * 4.3)) * 0.5 * DIFFICULTY.turbStrength * 0.4
@@ -244,25 +256,22 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
         const maxRate = CONFIG.MAX_RATE_SPEED; // rad/s
         drone.pitchRate = -filteredInput.pitch * maxRate; // negative: stick forward → nose down
         drone.rollRate  =  filteredInput.roll  * maxRate;
+        drone.yawRate   = -filteredInput.yaw   * CONFIG.MAX_YAW_RATE * 1.5;
         drone.pitch += drone.pitchRate * dt;
         drone.roll  += drone.rollRate  * dt;
 
         // No clamp – allow full 360° flips in acro mode
 
         // Thrust along drone body axis (accounts for full orientation).
-        // Body "up" rotated by pitch then roll into world frame:
-        //   x = -sin(roll)*cos(pitch), y = cos(pitch)*cos(roll), z = -sin(pitch)
-        const thrustWorld = new THREE.Vector3(
+        _thrustWorld.set(
           -Math.sin(drone.roll) * Math.cos(drone.pitch),
           Math.cos(drone.pitch) * Math.cos(drone.roll),
           -Math.sin(drone.pitch)
         );
-        // throttleNorm maps [-1,1] → [0,1]; THRUST_SCALE doubles back to match
-        // the effective range of the original formula (CONFIG.MAX_VERT_SPEED * 2)
         const THRUST_SCALE_FACTOR = 4.0;
         const throttleNorm = (filteredInput.throttle + 1) * 0.5; // 0 to 1
         const thrustScale = CONFIG.MAX_VERT_SPEED * THRUST_SCALE_FACTOR * throttleNorm * avgRpm;
-        drone.vel.addScaledVector(thrustWorld, thrustScale * dt);
+        drone.vel.addScaledVector(_thrustWorld, thrustScale * dt);
 
         // Gravity
         drone.vel.y -= 9.8 * dt * 0.18; // scaled for game feel
@@ -274,10 +283,10 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
         drone.vel.y *= Math.max(0, 1.0 - drag * 0.5 * dt);
 
       } else {
-        // ── Attitude mode (original) ──────────────────────────────────────
+        // ── Attitude mode ────────────────────────────────────────────────
         drone.yawRate += (-filteredInput.yaw * CONFIG.MAX_YAW_RATE - drone.yawRate) * (CONFIG.ACCEL_DAMP * dt);
 
-        // ── Gyroscopic precession: yawing while pitched/rolled adds cross torque
+        // Gyroscopic precession
         const gyroX = drone.yawRate * drone.roll  * 0.15;
         const gyroZ = drone.yawRate * drone.pitch * 0.15;
         drone.vel.x += gyroX * dt;
@@ -287,37 +296,40 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
       drone.yaw += drone.yawRate * dt;
 
       if (!isRateMode) {
-        const forward = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
-        const right   = new THREE.Vector3(1,0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
+        _forward.set(0, 0, -1).applyAxisAngle(_upAxis, drone.yaw);
+        _right.set(1, 0, 0).applyAxisAngle(_upAxis, drone.yaw);
 
         const targetVx = filteredInput.roll  * CONFIG.MAX_SPEED;
-        const targetVz =  filteredInput.pitch * CONFIG.MAX_SPEED; // forward stick (pitch < 0) → negative Vz → drone moves forward
-        const targetVy =  filteredInput.throttle * CONFIG.MAX_VERT_SPEED;
+        const targetVz = filteredInput.pitch * CONFIG.MAX_SPEED; // forward stick (pitch < 0) → negative Vz → drone moves forward
+        const targetVy = filteredInput.throttle * CONFIG.MAX_VERT_SPEED;
 
-        const targetWorldVel = new THREE.Vector3()
-          .addScaledVector(right,    targetVx)
-          .addScaledVector(forward, -targetVz);
-        targetWorldVel.y = targetVy;
+        _targetWorldVel.set(0, 0, 0)
+          .addScaledVector(_right, targetVx)
+          .addScaledVector(_forward, -targetVz);
+        _targetWorldVel.y = targetVy;
 
-        drone.vel.lerp(targetWorldVel, 1.0 - Math.exp(-CONFIG.ACCEL_DAMP * dt));
+        drone.vel.lerp(_targetWorldVel, 1.0 - Math.exp(-CONFIG.ACCEL_DAMP * dt));
 
         const activeDrag = (drone.vpsActive ? CONFIG.NORMAL_DRAG : CONFIG.VPS_FAIL_DRAG) * altDragFactor;
 
-        if (filteredInput.roll === 0 && filteredInput.pitch === 0) {
+        const noHorizInput = Math.abs(filteredInput.roll) < 0.04 && Math.abs(filteredInput.pitch) < 0.04;
+        if (noHorizInput) {
           drone.vel.x *= Math.max(0, 1.0 - activeDrag * dt);
           drone.vel.z *= Math.max(0, 1.0 - activeDrag * dt);
           if (!drone.vpsActive) {
-            drone.vel.addScaledVector(currentWind, dt * 1.8);
+            drone.vel.addScaledVector(_currentWind, dt * 1.5);
           }
         }
 
-        if (filteredInput.throttle === 0) {
+        if (Math.abs(filteredInput.throttle) < 0.04) {
           drone.vel.y *= Math.max(0, 1.0 - CONFIG.NORMAL_DRAG * dt);
         }
       }
 
-      drone.vel.addScaledVector(turbForce, dt);
-      drone.vel.addScaledVector(currentWind, dt * 0.08); // always a slight drift
+      drone.vel.addScaledVector(_turbForce, dt);
+      if (drone.vpsActive) {
+        drone.vel.addScaledVector(_currentWind, dt * 0.08); // slight natural drift
+      }
 
       // ── Ground effect: extra upward lift when very close to ground ───────
       if (drone.pos.y < 0.3 && filteredInput.throttle > 0) {
@@ -370,9 +382,10 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
   updateVisualAids(dt, elapsedTime);
 
   if (cameraViewMode === CAMERA_VIEW_MODES.FPV) {
-    const fpvForward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
-    camera.position.copy(drone.pos).addScaledVector(new THREE.Vector3(0,1,0), 0.04);
-    camera.lookAt(drone.pos.clone().add(fpvForward.multiplyScalar(CAMERA_SETTINGS.fpvLookAhead)));
+    _forward.set(0, 0, -1).applyAxisAngle(_upAxis, drone.yaw);
+    camera.position.copy(drone.pos).addScaledVector(_upAxis, 0.04);
+    _lookTarget.copy(drone.pos).addScaledVector(_forward, CAMERA_SETTINGS.fpvLookAhead);
+    camera.lookAt(_lookTarget);
     return;
   }
 
@@ -380,10 +393,10 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
     const spot = PILOT_CAMERA_SPOTS[CAMERA_SETTINGS.pilotSpot] || PILOT_CAMERA_SPOTS.startPad;
     camera.position.copy(spot);
 
-    _pilotLookTarget.copy(drone.pos).add(new THREE.Vector3(0, 0.12, 0));
+    _pilotLookTarget.copy(drone.pos).addScaledVector(_upAxis, 0.12);
     _pilotTargetDir.copy(_pilotLookTarget).sub(camera.position);
     if (_pilotTargetDir.lengthSq() < 0.0001) {
-      _pilotFallbackDir.set(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), drone.yaw);
+      _pilotFallbackDir.set(0, 0, -1).applyAxisAngle(_upAxis, drone.yaw);
       _pilotTargetDir.copy(_pilotFallbackDir);
     } else {
       _pilotTargetDir.normalize();
@@ -401,20 +414,23 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
     return;
   }
 
-  const lookTarget  = drone.pos.clone().add(new THREE.Vector3(0, 0.15, 0));
-  const camOffset   = new THREE.Vector3(
+  _lookTarget.copy(drone.pos).addScaledVector(_upAxis, 0.15);
+  _camOffset.set(
     0,
     CAMERA_SETTINGS.chaseHeight,
     CAMERA_SETTINGS.chaseDistance
-  ).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
-  const targetCamPos = drone.pos.clone().add(camOffset);
-  if (targetCamPos.y < 0.25) targetCamPos.y = 0.25;
+  ).applyAxisAngle(_upAxis, drone.yaw);
+  _targetCamPos.copy(drone.pos).add(_camOffset);
+  if (_targetCamPos.y < 0.25) _targetCamPos.y = 0.25;
+
   if (CAMERA_SETTINGS.turnSmoothing <= 0) {
-    camera.position.copy(targetCamPos);
+    camera.position.copy(_targetCamPos);
   } else {
-    camera.position.lerp(targetCamPos, CAMERA_SETTINGS.turnSmoothing);
+    // Frame-rate independent exponential smoothing
+    const camAlpha = 1.0 - Math.exp(-dt / Math.max(0.01, CAMERA_SETTINGS.turnSmoothing));
+    camera.position.lerp(_targetCamPos, Math.min(1.0, camAlpha));
   }
-  camera.lookAt(lookTarget);
+  camera.lookAt(_lookTarget);
 }
 
 export function updateVisualAids(dt, elapsedTime) {

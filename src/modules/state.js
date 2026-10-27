@@ -3,7 +3,7 @@
  * All modules import and mutate this object directly.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from './three.js';
 
 export const FlightState = {
   LANDED:    'EN TIERRA',

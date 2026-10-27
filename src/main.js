@@ -9,8 +9,8 @@ import { initOverlayEvents, showLevelOverlay } from './modules/overlays.js';
 import { applySpeedPreset } from './modules/flightState.js';
 import { setFlightState } from './modules/flightState.js';
 import { loadLevel } from './modules/levels.js';
-import { tryRespawnFromSoftCheckpoint } from './modules/missions.js';
-import { loadFreestyle, exitFreestyleMode, FREESTYLE_WIND_PRESETS } from './modules/freestyle.js';
+import { tryRespawnFromSoftCheckpoint, recordMissionRetry } from './modules/missions.js';
+import { loadFreestyle, reloadCurrentFreestyle, exitFreestyleMode, FREESTYLE_WIND_PRESETS } from './modules/freestyle.js';
 import {
   FlightState, DIFFICULTY, JOY_CONFIG, CONFIG, PERFORMANCE, CAMERA_SETTINGS, CAMERA_VIEW_MODES, PILOT_CAMERA_SPOTS,
   drone, isFreestyleMode,
@@ -33,7 +33,7 @@ initJoysticks();
 // ── Overlay event wiring (level select, progress panel, etc.) ──
 initOverlayEvents();
 
-// ── Takeoff / Land button ──
+// ── Takeoff / Land / Respawn button ──
 const btnTakeoff = document.getElementById('btn-takeoff');
 btnTakeoff.addEventListener('click', () => {
   if (drone.state === FlightState.LANDED) {
@@ -42,8 +42,9 @@ btnTakeoff.addEventListener('click', () => {
     setFlightState(FlightState.LANDING);
   } else if (drone.state === FlightState.CRASHED) {
     if (isFreestyleMode) {
-      loadFreestyle();
+      reloadCurrentFreestyle();
     } else {
+      recordMissionRetry();
       const resumed = tryRespawnFromSoftCheckpoint();
       if (!resumed) {
         loadLevel(currentLevel);
@@ -125,19 +126,124 @@ if (cfgEmergencyDisconnect) {
   });
 }
 
-// ── Performance toggles ──
+// ── Performance & Quality settings ──
+const SETTINGS_KEY = 'dronetrainer_user_settings_v1';
+
+function saveSettings() {
+  try {
+    const data = {
+      lowPowerMode: PERFORMANCE.lowPowerMode,
+      shadows: PERFORMANCE.shadows,
+      environment: PERFORMANCE.environment,
+      windParticles: PERFORMANCE.windParticles,
+      flightAids: PERFORMANCE.flightAids,
+      joySensitivity: JOY_CONFIG.sensitivity,
+      joyCurve: JOY_CONFIG.exponent,
+      joyDeadzone: JOY_CONFIG.deadzone,
+      turnSmoothing: CAMERA_SETTINGS.turnSmoothing,
+      chaseDistance: CAMERA_SETTINGS.chaseDistance,
+      chaseHeight: CAMERA_SETTINGS.chaseHeight,
+      flightMode: CONFIG.FLIGHT_MODE,
+      swapKeyboard: JOY_CONFIG.swapKeyboard
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+  } catch (e) {}
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (typeof data.lowPowerMode === 'boolean') PERFORMANCE.lowPowerMode = data.lowPowerMode;
+    if (typeof data.shadows === 'boolean') PERFORMANCE.shadows = data.shadows;
+    if (typeof data.environment === 'boolean') PERFORMANCE.environment = data.environment;
+    if (typeof data.windParticles === 'boolean') PERFORMANCE.windParticles = data.windParticles;
+    if (typeof data.flightAids === 'boolean') PERFORMANCE.flightAids = data.flightAids;
+    if (typeof data.joySensitivity === 'number') JOY_CONFIG.sensitivity = data.joySensitivity;
+    if (typeof data.joyCurve === 'number') JOY_CONFIG.exponent = data.joyCurve;
+    if (typeof data.joyDeadzone === 'number') JOY_CONFIG.deadzone = data.joyDeadzone;
+    if (typeof data.turnSmoothing === 'number') CAMERA_SETTINGS.turnSmoothing = data.turnSmoothing;
+    if (typeof data.chaseDistance === 'number') CAMERA_SETTINGS.chaseDistance = data.chaseDistance;
+    if (typeof data.chaseHeight === 'number') CAMERA_SETTINGS.chaseHeight = data.chaseHeight;
+    if (typeof data.flightMode === 'string') CONFIG.FLIGHT_MODE = data.flightMode;
+    if (typeof data.swapKeyboard === 'boolean') JOY_CONFIG.swapKeyboard = data.swapKeyboard;
+  } catch (e) {}
+}
+
+loadSettings();
+
 const cfgLowPower  = document.getElementById('cfg-low-power');
 const cfgShadows   = document.getElementById('cfg-shadows');
 const cfgEnvDetail = document.getElementById('cfg-env-detail');
 const cfgWindPart  = document.getElementById('cfg-wind-particles');
 const cfgFlightAids= document.getElementById('cfg-flight-aids');
 
+function updateQualityButtons() {
+  let activePreset = 'med';
+  if (PERFORMANCE.lowPowerMode) {
+    activePreset = 'low';
+  } else if (PERFORMANCE.shadows) {
+    activePreset = 'high';
+  }
+  document.querySelectorAll('[data-quality]').forEach(b => {
+    b.classList.toggle('active', b.dataset.quality === activePreset);
+  });
+}
+
+function applyQualityPreset(preset) {
+  if (preset === 'low') {
+    PERFORMANCE.lowPowerMode = true;
+    PERFORMANCE.shadows = false;
+    PERFORMANCE.environment = false;
+    PERFORMANCE.windParticles = false;
+    PERFORMANCE.flightAids = false;
+    PERFORMANCE.vpsBeam = false;
+    PERFORMANCE.headingRing = false;
+    PERFORMANCE.droneShadow = false;
+    PERFORMANCE.trail = false;
+    PERFORMANCE.altRing = false;
+  } else if (preset === 'med') {
+    PERFORMANCE.lowPowerMode = false;
+    PERFORMANCE.shadows = false;
+    PERFORMANCE.environment = true;
+    PERFORMANCE.windParticles = true;
+    PERFORMANCE.flightAids = true;
+    PERFORMANCE.vpsBeam = true;
+    PERFORMANCE.headingRing = true;
+    PERFORMANCE.droneShadow = true;
+    PERFORMANCE.trail = true;
+    PERFORMANCE.altRing = true;
+  } else if (preset === 'high') {
+    PERFORMANCE.lowPowerMode = false;
+    PERFORMANCE.shadows = true;
+    PERFORMANCE.environment = true;
+    PERFORMANCE.windParticles = true;
+    PERFORMANCE.flightAids = true;
+    PERFORMANCE.vpsBeam = true;
+    PERFORMANCE.headingRing = true;
+    PERFORMANCE.droneShadow = true;
+    PERFORMANCE.trail = true;
+    PERFORMANCE.altRing = true;
+  }
+  updateQualityButtons();
+  syncPerformanceUi();
+  syncAssistUi();
+  updatePerformanceSettings();
+  saveSettings();
+}
+
+document.querySelectorAll('[data-quality]').forEach(btn => {
+  btn.addEventListener('click', () => applyQualityPreset(btn.dataset.quality));
+});
+
 function syncPerformanceUi() {
   cfgLowPower.checked = PERFORMANCE.lowPowerMode;
   cfgShadows.checked = PERFORMANCE.shadows;
   cfgEnvDetail.checked = PERFORMANCE.environment;
   cfgWindPart.checked = PERFORMANCE.windParticles;
-  cfgFlightAids.checked = PERFORMANCE.flightAids;
+  if (cfgFlightAids) cfgFlightAids.checked = PERFORMANCE.flightAids;
+  updateQualityButtons();
 }
 
 cfgLowPower.addEventListener('change', () => {
@@ -153,7 +259,7 @@ cfgLowPower.addEventListener('change', () => {
     PERFORMANCE.trail = false;
     PERFORMANCE.altRing = false;
   } else {
-    PERFORMANCE.shadows = true;
+    PERFORMANCE.shadows = false;
     PERFORMANCE.environment = true;
     PERFORMANCE.windParticles = true;
     PERFORMANCE.flightAids = true;
@@ -164,7 +270,9 @@ cfgLowPower.addEventListener('change', () => {
     PERFORMANCE.altRing = true;
   }
   syncPerformanceUi();
+  syncAssistUi();
   updatePerformanceSettings();
+  saveSettings();
 });
 
 const cfgVpsBeam = document.getElementById('cfg-vps-beam');
@@ -174,28 +282,29 @@ const cfgTrail = document.getElementById('cfg-trail');
 const cfgAltRing = document.getElementById('cfg-alt-ring');
 
 function syncAssistUi() {
-  cfgVpsBeam.checked = PERFORMANCE.vpsBeam;
-  cfgHeadingRing.checked = PERFORMANCE.headingRing;
-  cfgDroneShadow.checked = PERFORMANCE.droneShadow;
-  cfgTrail.checked = PERFORMANCE.trail;
-  cfgAltRing.checked = PERFORMANCE.altRing;
+  if (cfgVpsBeam) cfgVpsBeam.checked = PERFORMANCE.vpsBeam;
+  if (cfgHeadingRing) cfgHeadingRing.checked = PERFORMANCE.headingRing;
+  if (cfgDroneShadow) cfgDroneShadow.checked = PERFORMANCE.droneShadow;
+  if (cfgTrail) cfgTrail.checked = PERFORMANCE.trail;
+  if (cfgAltRing) cfgAltRing.checked = PERFORMANCE.altRing;
 }
 
-[cfgShadows, cfgEnvDetail, cfgWindPart, cfgFlightAids, cfgVpsBeam, cfgHeadingRing, cfgDroneShadow, cfgTrail, cfgAltRing].forEach((toggle) => {
+[cfgShadows, cfgEnvDetail, cfgWindPart, cfgFlightAids, cfgVpsBeam, cfgHeadingRing, cfgDroneShadow, cfgTrail, cfgAltRing].filter(Boolean).forEach((toggle) => {
   toggle.addEventListener('change', () => {
     PERFORMANCE.shadows = cfgShadows.checked;
     PERFORMANCE.environment = cfgEnvDetail.checked;
     PERFORMANCE.windParticles = cfgWindPart.checked;
-    PERFORMANCE.flightAids = cfgFlightAids.checked;
-    PERFORMANCE.vpsBeam = cfgVpsBeam.checked;
-    PERFORMANCE.headingRing = cfgHeadingRing.checked;
-    PERFORMANCE.droneShadow = cfgDroneShadow.checked;
-    PERFORMANCE.trail = cfgTrail.checked;
-    PERFORMANCE.altRing = cfgAltRing.checked;
+    if (cfgFlightAids) PERFORMANCE.flightAids = cfgFlightAids.checked;
+    if (cfgVpsBeam) PERFORMANCE.vpsBeam = cfgVpsBeam.checked;
+    if (cfgHeadingRing) PERFORMANCE.headingRing = cfgHeadingRing.checked;
+    if (cfgDroneShadow) PERFORMANCE.droneShadow = cfgDroneShadow.checked;
+    if (cfgTrail) PERFORMANCE.trail = cfgTrail.checked;
+    if (cfgAltRing) PERFORMANCE.altRing = cfgAltRing.checked;
     PERFORMANCE.lowPowerMode = false;
     syncPerformanceUi();
     syncAssistUi();
     updatePerformanceSettings();
+    saveSettings();
   });
 });
 
@@ -246,14 +355,17 @@ function updateCameraValueLabels() {
 cfgCamSmooth.addEventListener('input', () => {
   CAMERA_SETTINGS.turnSmoothing = +cfgCamSmooth.value;
   updateCameraValueLabels();
+  saveSettings();
 });
 cfgCamDistance.addEventListener('input', () => {
   CAMERA_SETTINGS.chaseDistance = +cfgCamDistance.value;
   updateCameraValueLabels();
+  saveSettings();
 });
 cfgCamHeight.addEventListener('input', () => {
   CAMERA_SETTINGS.chaseHeight = +cfgCamHeight.value;
   updateCameraValueLabels();
+  saveSettings();
 });
 cfgPilotFrame.addEventListener('change', () => {
   setPilotFrame(cfgPilotFrame.checked);
@@ -299,6 +411,7 @@ updateCameraValueLabels();
 
 // ── Flight mode buttons ──
 document.querySelectorAll('[data-flightmode]').forEach(btn => {
+  btn.classList.toggle('active', btn.dataset.flightmode === CONFIG.FLIGHT_MODE);
   btn.addEventListener('click', () => {
     CONFIG.FLIGHT_MODE = btn.dataset.flightmode;
     document.querySelectorAll('[data-flightmode]').forEach(b => b.classList.remove('active'));
@@ -306,6 +419,7 @@ document.querySelectorAll('[data-flightmode]').forEach(btn => {
     // reset angular rates when switching
     drone.pitch = 0; drone.roll = 0;
     drone.pitchRate = 0; drone.rollRate = 0;
+    saveSettings();
   });
 });
 
@@ -384,28 +498,61 @@ const cfgJoyCurve   = document.getElementById('cfg-joy-curve');
 const cfgJoyCurveVal= document.getElementById('cfg-joy-curve-val');
 const cfgJoyDead    = document.getElementById('cfg-joy-deadzone');
 const cfgJoyDeadVal = document.getElementById('cfg-joy-deadzone-val');
-cfgJoySens.addEventListener('input', () => {
-  JOY_CONFIG.sensitivity = +cfgJoySens.value;
-  cfgJoySensVal.textContent = (+cfgJoySens.value).toFixed(2);
-});
-cfgJoyCurve.addEventListener('input', () => {
-  JOY_CONFIG.exponent = +cfgJoyCurve.value;
-  cfgJoyCurveVal.textContent = (+cfgJoyCurve.value).toFixed(1);
-});
-cfgJoyDead.addEventListener('input', () => {
-  JOY_CONFIG.deadzone = +cfgJoyDead.value;
-  cfgJoyDeadVal.textContent = Math.round(cfgJoyDead.value * 100) + '%';
-});
+
+if (cfgJoySens) {
+  cfgJoySens.value = JOY_CONFIG.sensitivity;
+  cfgJoySensVal.textContent = (+JOY_CONFIG.sensitivity).toFixed(2);
+  cfgJoySens.addEventListener('input', () => {
+    JOY_CONFIG.sensitivity = +cfgJoySens.value;
+    cfgJoySensVal.textContent = (+cfgJoySens.value).toFixed(2);
+    saveSettings();
+  });
+}
+if (cfgJoyCurve) {
+  cfgJoyCurve.value = JOY_CONFIG.exponent;
+  cfgJoyCurveVal.textContent = (+JOY_CONFIG.exponent).toFixed(1);
+  cfgJoyCurve.addEventListener('input', () => {
+    JOY_CONFIG.exponent = +cfgJoyCurve.value;
+    cfgJoyCurveVal.textContent = (+cfgJoyCurve.value).toFixed(1);
+    saveSettings();
+  });
+}
+if (cfgJoyDead) {
+  cfgJoyDead.value = JOY_CONFIG.deadzone;
+  cfgJoyDeadVal.textContent = Math.round(JOY_CONFIG.deadzone * 100) + '%';
+  cfgJoyDead.addEventListener('input', () => {
+    JOY_CONFIG.deadzone = +cfgJoyDead.value;
+    cfgJoyDeadVal.textContent = Math.round(cfgJoyDead.value * 100) + '%';
+    saveSettings();
+  });
+}
 
 // ── Keyboard swap toggle ──
 const cfgKbdSwap   = document.getElementById('cfg-kbd-swap');
 const kbdSwapHint  = document.getElementById('kbd-swap-hint');
 const KBD_HINT_DEFAULT = '↑↓ Subir/Bajar · ←→ Girar · WASD Pitch/Roll';
 const KBD_HINT_SWAPPED = 'WS Subir/Bajar · AD Girar · ↑↓←→ Pitch/Roll';
-cfgKbdSwap.addEventListener('change', () => {
-  JOY_CONFIG.swapKeyboard = cfgKbdSwap.checked;
-  kbdSwapHint.textContent = cfgKbdSwap.checked ? KBD_HINT_SWAPPED : KBD_HINT_DEFAULT;
-});
+if (cfgKbdSwap) {
+  cfgKbdSwap.checked = JOY_CONFIG.swapKeyboard;
+  if (kbdSwapHint) kbdSwapHint.textContent = cfgKbdSwap.checked ? KBD_HINT_SWAPPED : KBD_HINT_DEFAULT;
+  cfgKbdSwap.addEventListener('change', () => {
+    JOY_CONFIG.swapKeyboard = cfgKbdSwap.checked;
+    if (kbdSwapHint) kbdSwapHint.textContent = cfgKbdSwap.checked ? KBD_HINT_SWAPPED : KBD_HINT_DEFAULT;
+    saveSettings();
+  });
+}
+
+// ── Fullscreen button ──
+const btnFullscreen = document.getElementById('btn-fullscreen');
+if (btnFullscreen) {
+  btnFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+}
 
 // ── Camera mode cycle ──
 const fpvOverlay   = document.getElementById('fpv-overlay');
@@ -453,7 +600,7 @@ syncCameraUi();
 
 // ── Freestyle control panel buttons ──
 document.getElementById('btn-new-map').addEventListener('click', () => {
-  loadFreestyle();
+  reloadCurrentFreestyle();
 });
 document.getElementById('btn-exit-free').addEventListener('click', () => {
   exitFreestyleMode();
@@ -474,9 +621,8 @@ document.querySelectorAll('.wind-btn').forEach(btn => {
 
 // ── Service Worker registration ──
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/dronetrainer/sw.js').catch(() => {
-    // Fallback: try root-relative path (for local / custom deployments)
-    navigator.serviceWorker.register('/sw.js');
+  navigator.serviceWorker.register('./sw.js').catch(() => {
+    navigator.serviceWorker.register('/dronetrainer/sw.js').catch(() => {});
   });
 }
 

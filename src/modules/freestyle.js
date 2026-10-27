@@ -2,8 +2,8 @@
  * freestyle.js – Freestyle mode: load, logic update, HUD update, exit.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
-import { scene } from './scene.js';
+import * as THREE from './three.js';
+import { setEnvironmentMode } from './scene.js';
 import {
   FlightState, drone,
   levelObjects, setLevelObjects,
@@ -36,8 +36,12 @@ export const FREESTYLE_WIND_PRESETS = {
 function rnd(min, max) { return min + Math.random() * (max - min); }
 function rndInt(min, max) { return Math.floor(rnd(min, max + 1)); }
 
+export let currentFreestyleIndoor = false;
+
 function loadFreestyleBase(isIndoor = false) {
+  currentFreestyleIndoor = isIndoor;
   clearLevel();
+  setEnvironmentMode(isIndoor);
   setIsFreestyleMode(true);
   setFsGatesPassed(0);
   setFsSessionTime(0);
@@ -191,6 +195,8 @@ function loadFreestyleBase(isIndoor = false) {
   setFlightState(FlightState.LANDED);
 
   document.getElementById('mission-hud').style.display    = 'none';
+  const batteryWrap = document.getElementById('battery-bar-wrap');
+  if (batteryWrap) batteryWrap.style.display = 'none';
   document.getElementById('freestyle-hud').style.display  = 'block';
   document.getElementById('freestyle-panel').style.display = 'flex';
   updateFreestyleHUD();
@@ -236,6 +242,10 @@ export function updateFreestyleLogic(dt) {
   }
 
   updateFreestyleHUD();
+}
+
+export function reloadCurrentFreestyle() {
+  loadFreestyleBase(currentFreestyleIndoor);
 }
 
 export function exitFreestyleMode() {

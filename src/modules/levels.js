@@ -2,8 +2,9 @@
  * levels.js – Level definitions, loadLevel(), clearLevel().
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
-import { scene } from './scene.js';
+import * as THREE from './three.js';
+import { scene, setEnvironmentMode } from './scene.js';
+import { disposeObject } from './assets.js';
 import {
   drone, DIFFICULTY,
   levelObjects, setLevelObjects,
@@ -23,8 +24,11 @@ import {
   windVector,   setWindVector,
   isFreestyleMode, setIsFreestyleMode,
   setGateScores, setLevelStars, setHintRetries,
-  setReplayBuffer, setReplaySample
+  setReplayBuffer, setReplaySample,
+  batteryTimeLeft, setBatteryTimeLeft,
+  batteryDepleted, setBatteryDepleted
 } from './state.js';
+import { updateBatteryBar } from './hud.js';
 import { createFlightGate, createSlickZone, createLandingPad, checkGatePass,
          createSoftCheckpoint,
          createWaypoint, createInspectionTower, createGhostDrone } from './gates.js';
@@ -50,6 +54,7 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.0,
     windDir: new THREE.Vector3(0.35, 0, 0.15),
+    hazards: { vpsOn: true, windOn: true, windStrength: 1.0 },
     setup() {
       const g1 = createFlightGate(0, 1.2, -3.5, 0, 1.4);
       const g2 = createFlightGate(3.2, 1.4, -8.5, Math.PI/4, 1.4);
@@ -94,6 +99,7 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.8,
     windDir: new THREE.Vector3(0.6, 0, 0.3),
+    hazards: { vpsOn: true, windOn: true, windStrength: 1.5 },
     setup() {
       const g1 = createFlightGate( 0,   1.3, -4,    0,           1.2);
       const g2 = createFlightGate(-3.5, 1.5, -8,    Math.PI/6,   1.2);
@@ -128,6 +134,7 @@ export const LEVEL_DEFS = [
     ],
     windScale: 2.2,
     windDir: new THREE.Vector3(0.5, 0, -0.2),
+    hazards: { vpsOn: true, windOn: true, windStrength: 1.8 },
     setup() {
       const g1 = createFlightGate( 0,   2.5, -5,   0,         1.3);
       const g2 = createFlightGate(-2.5, 0.9, -10,  Math.PI/5, 1.3);
@@ -169,6 +176,7 @@ export const LEVEL_DEFS = [
     ],
     windScale: 3.0,
     windDir: new THREE.Vector3(0.9, 0, 0.5),
+    hazards: { vpsOn: true, windOn: true, windStrength: 2.2 },
     setup() {
       const g1 = createFlightGate( 0,   1.5,  -4,   0,          1.0);
       const g2 = createFlightGate( 2.5, 2.2,  -8,   Math.PI/3,  1.0);
@@ -219,6 +227,7 @@ export const LEVEL_DEFS = [
     ],
     windScale: 0.2,
     windDir: new THREE.Vector3(0.1, 0, 0.05),
+    hazards: { vpsOn: false, windOn: false },
     medalTimes: { gold: 30, silver: 45, bronze: 60 },
     setup() {
       // 6 gates in an oval, large size
@@ -261,10 +270,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.2,
     windDir: new THREE.Vector3(0.4, 0, 0.2),
+    hazards: { batteryOn: true, batteryTime: 90, windOn: true, windStrength: 1.0 },
     setup() {
-      // Force battery on for this level
-      DIFFICULTY.batteryOn  = true;
-      DIFFICULTY.batteryTime = 90;
 
       // Debris obstacles: pillars and walls
       const addPillar = (x, z, h) => {
@@ -341,10 +348,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.8,
     windDir: new THREE.Vector3(0.5, 0, 0.3),
+    hazards: { turbOn: true, turbStrength: 2.0, vpsOn: true, windOn: true, windStrength: 1.2 },
     setup() {
-      DIFFICULTY.turbOn      = true;
-      DIFFICULTY.turbStrength = 2.5;
-
       // Build inspection tower at centre
       createInspectionTower(0, -14, 7.0);
 
@@ -362,7 +367,7 @@ export const LEVEL_DEFS = [
       // Full orbit zone is a VPS-loss zone
       setLevelSlickZones([...levelSlickZones, createSlickZone(0, -14, 9, 9)]);
 
-      setLevelLandingPad(createLandingPad(0, -14, 0xffd54f));
+      setLevelLandingPad(createLandingPad(0, -9.5, 0xffd54f));
 
       const total = 7;
       setMissions([
@@ -372,7 +377,7 @@ export const LEVEL_DEFS = [
         { title: `ÓRBITA 4/${total}`, desc: "Objetivo suave 4 — lado opuesto de la torre", check: () => orbitSoftTargets[3].check(0.55), onComplete: () => orbitSoftTargets[3].setActivated() },
         { title: `ÓRBITA 5/${total}`, desc: "Objetivo suave 5 — recta final de la órbita", check: () => orbitSoftTargets[4].check(0.55), onComplete: () => orbitSoftTargets[4].setActivated() },
         { title: `ÓRBITA 6/${total}`, desc: "Objetivo suave 6 — cierre del circuito", check: () => orbitSoftTargets[5].check(0.55), onComplete: () => orbitSoftTargets[5].setActivated() },
-        { title: `ÓRBITA 7/${total}`, desc: "Aterriza en la base de la torre (helipuerto amarillo)", check: () => false }
+        { title: `ÓRBITA 7/${total}`, desc: "Aterriza en el helipuerto amarillo junto a la torre", check: () => false }
       ]);
     }
   },
@@ -392,11 +397,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 4.0,
     windDir: new THREE.Vector3(0.9, 0, 0.6),
+    hazards: { batteryOn: true, batteryTime: 45, turbOn: true, turbStrength: 2.0, vpsOn: true, windOn: true, windStrength: 2.5 },
     setup() {
-      DIFFICULTY.batteryOn   = true;
-      DIFFICULTY.batteryTime  = 45;
-      DIFFICULTY.turbOn       = true;
-      DIFFICULTY.turbStrength = 2.0;
 
       const g1 = createFlightGate( 0,   1.5, -4,    0,            0.8);
       const g2 = createFlightGate( 2.0, 2.2, -8,    Math.PI/3,    0.8);
@@ -454,6 +456,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.1,
     windDir: new THREE.Vector3(0.25, 0, 0.35),
+    isIndoor: true,
+    hazards: { vpsOn: true, windOn: false },
     setup() {
       const addWall = (x, y, z, w, h, d, ry = 0, color = 0x616161) => {
         const m = new THREE.Mesh(
@@ -535,6 +539,7 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.6,
     windDir: new THREE.Vector3(0.45, 0, -0.25),
+    hazards: { windOn: true, windStrength: 1.4 },
     setup() {
       const addFrame = (x, y, z, sx, sy, sz, color = 0x546e7a) => {
         const m = new THREE.Mesh(
@@ -610,9 +615,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 2.0,
     windDir: new THREE.Vector3(0.7, 0, 0.35),
+    hazards: { batteryOn: true, batteryTime: 75, vpsOn: true, windOn: true, windStrength: 1.6 },
     setup() {
-      DIFFICULTY.batteryOn = true;
-      DIFFICULTY.batteryTime = 75;
 
       const addSplitterWall = (x, z, w, h, ry = 0) => {
         const m = new THREE.Mesh(
@@ -725,6 +729,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.2,
     windDir: new THREE.Vector3(0.3, 0, 0.22),
+    isIndoor: true,
+    hazards: { vpsOn: true, windOn: false },
     setup() {
       const addBox = (x, y, z, sx, sy, sz, color = 0x616161) => {
         const m = new THREE.Mesh(
@@ -801,6 +807,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.4,
     windDir: new THREE.Vector3(0.35, 0, -0.2),
+    isIndoor: true,
+    hazards: { windOn: false },
     setup() {
       const addBox = (x, y, z, sx, sy, sz, color = 0x546e7a) => {
         const m = new THREE.Mesh(
@@ -867,6 +875,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.7,
     windDir: new THREE.Vector3(0.55, 0, 0.28),
+    isIndoor: true,
+    hazards: { windOn: false },
     setup() {
       const addWall = (x, z, w, h, ry = 0) => {
         const m = new THREE.Mesh(
@@ -930,6 +940,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 1.5,
     windDir: new THREE.Vector3(0.45, 0, 0.3),
+    isIndoor: true,
+    hazards: { vpsOn: true, windOn: true, windStrength: 1.2 },
     setup() {
       const addRack = (x, z, h = 2.4) => {
         const postMat = new THREE.MeshStandardMaterial({ color: 0x455a64, roughness: 0.82 });
@@ -1010,9 +1022,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 0.6,
     windDir: new THREE.Vector3(0.2, 0, 0.12),
+    hazards: { windOn: false, batteryOn: false, turbOn: false, vpsOn: false },
     setup() {
-      DIFFICULTY.batteryOn = false;
-      DIFFICULTY.turbOn = false;
 
       const targets = [
         createSoftCheckpoint( 0.0, 1.2, -4.5,  0,            1.2),
@@ -1054,9 +1065,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 0.7,
     windDir: new THREE.Vector3(0.15, 0, -0.1),
+    hazards: { windOn: false, batteryOn: false, turbOn: false, vpsOn: false },
     setup() {
-      DIFFICULTY.batteryOn = false;
-      DIFFICULTY.turbOn = false;
 
       const targets = [
         createSoftCheckpoint( 0.0, 1.0, -4.0, 0,             1.2),
@@ -1098,9 +1108,8 @@ export const LEVEL_DEFS = [
     ],
     windScale: 0.9,
     windDir: new THREE.Vector3(0.22, 0, 0.16),
+    hazards: { windOn: false, batteryOn: false, turbOn: false, vpsOn: false },
     setup() {
-      DIFFICULTY.batteryOn = false;
-      DIFFICULTY.turbOn = false;
 
       const targets = [
         createSoftCheckpoint( 0.0, 1.1, -4.2,   0,            1.15),
@@ -1131,7 +1140,10 @@ export const LEVEL_DEFS = [
 ];
 
 export function clearLevel() {
-  levelObjects.forEach(obj => scene.remove(obj));
+  levelObjects.forEach(obj => {
+    scene.remove(obj);
+    disposeObject(obj);
+  });
   setLevelObjects([]);
   setObstacles([]);
   setLevelSlickZones([]);
@@ -1159,10 +1171,40 @@ export function loadLevel(idx) {
   setReplayBuffer([]);
   setReplaySample(0);
 
+  // Baseline difficulty before applying level hazards
+  DIFFICULTY.batteryOn = false;
+  DIFFICULTY.batteryTime = 120;
+  DIFFICULTY.windOn = false;
+  DIFFICULTY.windStrength = 1.0;
+  DIFFICULTY.turbOn = false;
+  DIFFICULTY.turbStrength = 1.0;
+  DIFFICULTY.vpsOn = false;
+
   const def = LEVEL_DEFS[idx];
+  setEnvironmentMode(!!def.isIndoor);
   setWindVector(def.windDir.clone().multiplyScalar(def.windScale));
 
+  if (def.hazards) {
+    if (def.hazards.windOn !== undefined) DIFFICULTY.windOn = def.hazards.windOn;
+    if (def.hazards.windStrength !== undefined) DIFFICULTY.windStrength = def.hazards.windStrength;
+    if (def.hazards.vpsOn !== undefined) DIFFICULTY.vpsOn = def.hazards.vpsOn;
+    if (def.hazards.turbOn !== undefined) DIFFICULTY.turbOn = def.hazards.turbOn;
+    if (def.hazards.turbStrength !== undefined) DIFFICULTY.turbStrength = def.hazards.turbStrength;
+    if (def.hazards.batteryOn !== undefined) DIFFICULTY.batteryOn = def.hazards.batteryOn;
+    if (def.hazards.batteryTime !== undefined) DIFFICULTY.batteryTime = def.hazards.batteryTime;
+  }
+
   def.setup();
+
+  setBatteryTimeLeft(DIFFICULTY.batteryTime);
+  setBatteryDepleted(false);
+  const batteryWrap = document.getElementById('battery-bar-wrap');
+  if (batteryWrap) {
+    batteryWrap.style.display = DIFFICULTY.batteryOn ? 'block' : 'none';
+  }
+  if (DIFFICULTY.batteryOn) {
+    updateBatteryBar(DIFFICULTY.batteryTime, DIFFICULTY.batteryTime);
+  }
 
   document.getElementById('mission-hud').style.display    = 'block';
   document.getElementById('freestyle-hud').style.display  = 'none';
@@ -1186,7 +1228,7 @@ export function loadLevel(idx) {
 }
 
 export function updateMovingGate(elapsedTime) {
-  if (!movingGate) return;
+  if (!movingGate || !movingGate.group) return;
   const newX = Math.sin(elapsedTime * 0.7) * 3.5;
   movingGate.group.position.x = newX;
   movingGate.center.x = newX;
@@ -1194,7 +1236,8 @@ export function updateMovingGate(elapsedTime) {
   movingGate.group.children.forEach(part => {
     part.updateWorldMatrix(true, false);
   });
-  for (const colBox of obstacles) {
+  for (let i = 0; i < obstacles.length; i++) {
+    const colBox = obstacles[i];
     if (movingGate.group.children.includes(colBox.mesh)) {
       colBox.box.setFromObject(colBox.mesh);
     }

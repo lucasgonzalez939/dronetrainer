@@ -43,10 +43,12 @@ export function showLevelOverlay(idx, isTransition) {
     objectivesHtml += `<li style="color:#ffd700">🥇 Oro: &lt;${gold}s &nbsp; 🥈 Plata: &lt;${silver}s &nbsp; 🥉 Bronce: &lt;${bronze}s</li>`;
   }
 
-  // Show best time if recorded
-  if (levelBestTimes[idx] !== undefined) {
-    const best = levelBestTimes[idx].toFixed(1);
-    const stars = '⭐'.repeat(levelStars) + '☆'.repeat(3 - levelStars);
+  // Show best time and stars if recorded
+  const prog = loadProgress();
+  const best = prog.bestTimes[idx];
+  const starsCount = prog.stars[idx] || 0;
+  if (best !== undefined) {
+    const stars = '⭐'.repeat(starsCount) + '☆'.repeat(3 - starsCount);
     objectivesHtml += `<li style="color:#00e5ff">⏱ Mejor tiempo: ${best}s &nbsp; ${stars}</li>`;
   }
 
@@ -73,9 +75,13 @@ export function buildLevelProgressPanel() {
     numEl.className = 'lp-level-num' + (completed ? ' completed' : ' unlocked');
     numEl.textContent = idx + 1;
 
+    const best = prog.bestTimes[idx];
+    const starsCount = prog.stars[idx] || 0;
+    const scoreStr = best ? ` · ${best}s ${'⭐'.repeat(starsCount)}` : '';
+
     const info = document.createElement('div');
     info.className = 'lp-level-info';
-    info.innerHTML = `<div class="lp-level-name">${def.name}</div><div class="lp-level-sub">${def.subtitle}</div>`;
+    info.innerHTML = `<div class="lp-level-name">${def.name}${scoreStr}</div><div class="lp-level-sub">${def.subtitle}</div>`;
 
     const badge = document.createElement('div');
     badge.className = 'lp-level-badge' + (completed ? ' done' : (isCurrent ? ' active' : ''));

@@ -21,6 +21,16 @@
 </head>
 <body>
 
+  <!-- Orientation warning for tablets/phones in portrait -->
+  <div id="orientation-warning">
+    <div class="orientation-box">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="#00e5ff">
+        <path d="M16 1H8C6.34 1 5 2.34 5 4v16c0 1.66 1.34 3 3 3h8c1.66 0 3-1.34 3-3V4c0-1.66-1.34-3-3-3zm1 18c0 .55-.45 1-1 1H8c-.55 0-1-.45-1-1V5c0-.55.45-1 1-1h8c.55 0 1 .45 1 1v14z"/>
+      </svg>
+      <p>Gira tu dispositivo a modo <b>Horizontal (Landscape)</b> para una mejor experiencia de vuelo.</p>
+    </div>
+  </div>
+
   <!-- Level intro / completion overlay -->
   <div id="level-overlay">
     <h1 id="ov-level-title">NIVEL 1</h1>
@@ -153,12 +163,17 @@
 
       <!-- Performance -->
       <div class="cfg-section">
-        <div class="cfg-section-title">RENDIMIENTO</div>
+        <div class="cfg-section-title">CALIDAD GRÁFICA</div>
+        <div class="cfg-speed-row" style="margin-bottom:12px;">
+          <button class="cfg-speed-btn" id="cfg-quality-low" data-quality="low">📱 BAJO (Tablet)</button>
+          <button class="cfg-speed-btn active" id="cfg-quality-med" data-quality="med">🎯 MEDIO</button>
+          <button class="cfg-speed-btn" id="cfg-quality-high" data-quality="high">⚡ ALTO</button>
+        </div>
 
         <div class="cfg-toggle-row">
           <div>
             <div class="cfg-toggle-label">⚙️ Modo bajo consumo</div>
-            <div class="cfg-toggle-sub">Reduce sombras, entorno y ayudas visuales</div>
+            <div class="cfg-toggle-sub">Reduce sombras, entorno y resolución</div>
           </div>
           <label class="cfg-toggle">
             <input type="checkbox" id="cfg-low-power">
@@ -172,7 +187,7 @@
             <div class="cfg-toggle-sub">Desactiva sombras dinámicas del mundo</div>
           </div>
           <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-shadows" checked>
+            <input type="checkbox" id="cfg-shadows">
             <span class="cfg-toggle-track"></span>
           </label>
         </div>
@@ -475,13 +490,15 @@
       </div>
 
       <div class="top-icons-right">
+        <button id="btn-fullscreen" title="Pantalla completa">
+          <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        </button>
         <button id="btn-levels" title="Progreso de niveles">
           <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="#fff" stroke="none"/></svg>
         </button>
         <button id="btn-cam-toggle" title="Cambiar vista (3ª persona / FPV)">
           <svg viewBox="0 0 24 24"><rect x="2" y="7" width="13" height="10" rx="2"/><polygon points="23 7 16 12 23 17 23 7"/></svg>
         </button>
-        <div id="btn-record"><div id="btn-record-inner"></div></div>
       </div>
     </div>
 

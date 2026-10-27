@@ -2,7 +2,7 @@
  * scene.js – Three.js scene, renderer, camera, environment, drone mesh.
  */
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+import * as THREE from './three.js';
 import { PERFORMANCE } from './state.js';
 
 export let scene, camera, renderer;
@@ -25,8 +25,11 @@ export let altRing, altRingMat;
 export const WIND_PARTICLE_COUNT = 180;
 export const windParticlePositions = new Float32Array(180 * 3);
 export let windParticleGeo, windParticleMat, windParticles;
-export const planeWidth = 100;
-export const planeHeight = 100;
+export const planeWidth = 52;
+export const planeHeight = 64;
+
+// Environment groups
+export let outdoorGroup, indoorGroup;
 
 // Drone mesh objects
 export let droneGroup;
@@ -35,6 +38,20 @@ export let motorLights = [];
 export let motorStartupTimer = 0;
 const performanceClouds = [];
 const performanceEnvironment = [];
+
+export function setEnvironmentMode(isIndoor = false) {
+  if (outdoorGroup) outdoorGroup.visible = !isIndoor;
+  if (indoorGroup) indoorGroup.visible = isIndoor;
+  if (scene && scene.fog) {
+    if (isIndoor) {
+      scene.fog.color.setHex(0x1a2129);
+      scene.fog.density = 0.012;
+    } else {
+      scene.fog.color.setHex(0xd4956a);
+      scene.fog.density = 0.008;
+    }
+  }
+}
 
 export function registerPerformanceObject(obj, kind = 'environment') {
   if (!obj) return;
@@ -158,21 +175,27 @@ export function initScene() {
     side: THREE.BackSide,
     depthWrite: false
   });
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), skyMat));
+  outdoorGroup = new THREE.Group();
+  indoorGroup = new THREE.Group();
+  scene.add(outdoorGroup);
+  scene.add(indoorGroup);
+
+  const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), skyMat);
+  outdoorGroup.add(skyMesh);
 
   // ── Sun disc ─────────────────────────────────────────────────────────────
   const sunDiscMat = new THREE.MeshBasicMaterial({ color: 0xfffbe0, fog: false });
   const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(14, 32), sunDiscMat);
   sunDisc.position.set(240, 360, 180);
   sunDisc.lookAt(0, 0, 0);
-  scene.add(sunDisc);
+  outdoorGroup.add(sunDisc);
 
   // Sun glow halo
   const haloMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.18, fog: false, side: THREE.DoubleSide });
   const halo = new THREE.Mesh(new THREE.CircleGeometry(30, 32), haloMat);
   halo.position.copy(sunDisc.position);
   halo.lookAt(0, 0, 0);
-  scene.add(halo);
+  outdoorGroup.add(halo);
 
   // ── Cloud planes ─────────────────────────────────────────────────────────
   const cloudVS = `
@@ -212,27 +235,17 @@ export function initScene() {
     cloud.position.set(cx, cy, cz);
     cloud.lookAt(0, cy, 0);
     registerPerformanceObject(cloud, 'cloud');
-    scene.add(cloud);
+    outdoorGroup.add(cloud);
   });
 
   // ── Lights ────────────────────────────────────────────────────────────────
   scene.add(new THREE.HemisphereLight(0xffe4b5, 0x3b5e3a, 0.65));
   const sun = new THREE.DirectionalLight(0xfff0cc, 1.1);
   sun.position.set(40, 60, 30);
-  sun.castShadow = true;
-  sun.shadow.mapSize.width  = 100;
-  sun.shadow.mapSize.height = 100;
-  sun.shadow.camera.near  = 0.5;
-  sun.shadow.camera.far   = 300;
-  sun.shadow.camera.left  = -80;
-  sun.shadow.camera.right =  80;
-  sun.shadow.camera.top   =  80;
-  sun.shadow.camera.bottom = -80;
-  sun.shadow.bias = -0.001;
   scene.add(sun);
 
   // Ambient fill light for warmer feel
-  scene.add(new THREE.AmbientLight(0xffd580, 0.15));
+  scene.add(new THREE.AmbientLight(0xffd580, 0.2));
 
   // ── Ground – richer grass green with ShaderMaterial ──────────────────────
   const groundVS = `
@@ -256,47 +269,26 @@ export function initScene() {
   const groundMat = new THREE.ShaderMaterial({ vertexShader: groundVS, fragmentShader: groundFS });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(planeWidth, planeHeight, 1, 1), groundMat);
   ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
+  ground.position.set(0, 0, -18);
+  outdoorGroup.add(ground);
 
   // ── Dirt path strip ───────────────────────────────────────────────────────
   const path = new THREE.Mesh(
     new THREE.PlaneGeometry(1.6, 35),
-    new THREE.MeshStandardMaterial({ color: 0x8b6244, roughness: 0.95, metalness: 0.0 })
+    new THREE.MeshLambertMaterial({ color: 0x8b6244 })
   );
   path.rotation.x = -Math.PI / 2;
   path.position.set(0, 0.011, -15);
-  scene.add(path);
-
-  // ── Grid ──────────────────────────────────────────────────────────────────
-  //const grid = new THREE.GridHelper(60, 60, 0x4e3b31, 0x4e3b31);
-  //grid.position.y = 0.012;
-  //scene.add(grid);
+  outdoorGroup.add(path);
 
   // ── Start pad – distinctive with rings and H marker ───────────────────────
-  const padMat = new THREE.MeshStandardMaterial({ color: 0x67686d, roughness: 0.5, metalness: 0 });
-  const startPad = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.001, 32), padMat);
+  const padMat = new THREE.MeshLambertMaterial({ color: 0x67686d });
+  const startPad = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.001, 24), padMat);
   startPad.position.set(0, 0.025, 0);
-  startPad.castShadow = false;
-  startPad.receiveShadow = true;
-  scene.add(startPad);
-
-  // Concentric ring 1
-  //const ring1Mat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x003344, roughness: 0.3 });
-  //const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.04, 8, 48), ring1Mat);
-  //ring1.rotation.x = Math.PI / 2;
-  //ring1.position.set(0, 0.028, 0);
-  //scene.add(ring1);
-
-  // Concentric ring 2
-  //const ring2Mat = new THREE.MeshStandardMaterial({ color: 0x00bcd4, emissive: 0x001a22, roughness: 0.3 });
-  //const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.025, 8, 48), ring2Mat);
-  //ring2.rotation.x = Math.PI / 2;
-  //ring2.position.set(0, 0.028, 0);
-  //scene.add(ring2);
+  outdoorGroup.add(startPad);
 
   // H marker bars (cross shape)
-  const hMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x333333, roughness: 0.4 });
+  const hMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   [
     { sx: 0.06, sz: 0.32, px: -0.18, pz: 0 },
     { sx: 0.06, sz: 0.32, px:  0.18, pz: 0 },
@@ -304,7 +296,7 @@ export function initScene() {
   ].forEach(({ sx, sz, px, pz }) => {
     const bar = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.005, sz), hMat);
     bar.position.set(px, 0.033, pz);
-    scene.add(bar);
+    outdoorGroup.add(bar);
   });
 
   // ── Visual aids ───────────────────────────────────────────────────────────
@@ -367,6 +359,8 @@ export function initScene() {
 
   // ── Environment: trees, houses, rocks ────────────────────────────────────
   _buildEnvironment();
+  _buildIndoorEnvironment();
+  setEnvironmentMode(false);
 
   // ── Drone mesh ───────────────────────────────────────────────────────────
   _buildDrone();
@@ -375,6 +369,7 @@ export function initScene() {
   camera.position.set(0, 0.8, 2.2);
   camera.lookAt(0, 0.1, 0);
 
+<<<<<<< HEAD
   const handleResize = () => {
     applyViewportSize();
     updatePerformanceSettings();
@@ -384,6 +379,16 @@ export function initScene() {
   window.addEventListener('resize', handleResize);
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', handleResize);
+=======
+  updatePerformanceSettings();
+
+  window.addEventListener('resize', applyViewportSize);
+  window.addEventListener('orientationchange', () => {
+    setTimeout(applyViewportSize, 100);
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', applyViewportSize);
+>>>>>>> ab6d204 (major bug fixes)
   }
 }
 
@@ -391,153 +396,188 @@ export function initScene() {
 function _buildEnvironment() {
   const rand = seededRand(42);
 
-  // ── Low-poly trees ──────────────────────────────────────────────────────
-  const trunkMat   = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
+  // ── Low-poly trees (optimized Lambert) ───────────────────────────────────
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c3a1e });
   const foliageMats = [
-    new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 }),
-    new THREE.MeshStandardMaterial({ color: 0x388e3c, roughness: 0.8 }),
-    new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.8 }),
+    new THREE.MeshLambertMaterial({ color: 0x2e7d32 }),
+    new THREE.MeshLambertMaterial({ color: 0x388e3c }),
+    new THREE.MeshLambertMaterial({ color: 0x1b5e20 })
   ];
 
-  for (let t = 0; t < 22; t++) {
-    // Scatter outside the central flight corridor (beyond 12 m radius)
+  for (let t = 0; t < 12; t++) {
     let tx, tz;
     do {
-      tx = (rand() - 0.5) * 90;
-      tz = (rand() - 0.5) * 90;
-    // Reject if inside the drone start zone OR inside the flight path corridor
-    } while ((Math.abs(tx) < 8 && Math.abs(tz) < 8) ||
-             (Math.abs(tx) < 8 && tz > -30 && tz < 5));
+      tx = (rand() - 0.5) * 44;
+      tz = -18 + (rand() - 0.5) * 48;
+    } while ((Math.abs(tx) < 7 && Math.abs(tz) < 7) ||
+             (Math.abs(tx) < 7 && tz > -36 && tz < 4));
 
-    const treeH   = 2.5 + rand() * 3.5;
-    const trunkH  = treeH * 0.45;
-    const foliageR = treeH * 0.32 + 0.4;
+    const treeH = 2.4 + rand() * 2.8;
+    const trunkH = treeH * 0.45;
+    const foliageR = treeH * 0.32 + 0.3;
 
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, trunkH, 7), trunkMat);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.15, trunkH, 6), trunkMat);
     trunk.position.set(tx, trunkH / 2, tz);
-    trunk.castShadow = true;
-    trunk.receiveShadow = true;
     registerPerformanceObject(trunk);
-    scene.add(trunk);
+    outdoorGroup.add(trunk);
 
-    // Layered cone foliage (2 layers)
     const fMat = foliageMats[t % foliageMats.length];
-    const cone1 = new THREE.Mesh(new THREE.ConeGeometry(foliageR, treeH * 0.6, 7), fMat);
+    const cone1 = new THREE.Mesh(new THREE.ConeGeometry(foliageR, treeH * 0.6, 6), fMat);
     cone1.position.set(tx, trunkH + treeH * 0.22, tz);
-    cone1.castShadow = true;
     registerPerformanceObject(cone1);
-    scene.add(cone1);
+    outdoorGroup.add(cone1);
 
-    const cone2 = new THREE.Mesh(new THREE.ConeGeometry(foliageR * 0.65, treeH * 0.45, 7), fMat);
+    const cone2 = new THREE.Mesh(new THREE.ConeGeometry(foliageR * 0.65, treeH * 0.45, 6), fMat);
     cone2.position.set(tx, trunkH + treeH * 0.52, tz);
-    cone2.castShadow = true;
     registerPerformanceObject(cone2);
-    scene.add(cone2);
+    outdoorGroup.add(cone2);
   }
 
-  // ── Low-poly houses ──────────────────────────────────────────────────────
-  const wallColors  = [0xdeb887, 0xc8a97a, 0xe8d5b0, 0xb0896a, 0xd4a373];
-  const roofColors  = [0x8b3a3a, 0x6b3030, 0xa04545, 0x7a4040, 0x5c2e2e];
-
+  // ── Low-poly houses (3 houses around perimeter) ──────────────────────────
+  const wallColors = [0xdeb887, 0xc8a97a, 0xe8d5b0];
+  const roofColors = [0x8b3a3a, 0x6b3030, 0xa04545];
   const housePositions = [
-    { x: -28, z: -18 }, { x: 32, z: -22 }, { x: -35, z: 20 },
-    { x: 25,  z: 25  }, { x:  0, z: -38 }
+    { x: -22, z: -15 }, { x: 22, z: -20 }, { x: 0, z: -46 }
   ];
 
   housePositions.forEach(({ x, z }, i) => {
-    const w = 3.5 + rand() * 1.5;
-    const d = 2.5 + rand() * 1.0;
-    const wallH = 2.0 + rand() * 0.8;
+    const w = 3.6 + rand() * 1.0;
+    const d = 2.6 + rand() * 0.8;
+    const wallH = 2.0 + rand() * 0.6;
     const rot = rand() * Math.PI * 2;
 
     const houseGroup = new THREE.Group();
     houseGroup.rotation.y = rot;
 
-    // Walls
-    const wallMat = new THREE.MeshStandardMaterial({ color: wallColors[i % wallColors.length], roughness: 0.85 });
+    const wallMat = new THREE.MeshLambertMaterial({ color: wallColors[i % wallColors.length] });
     const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), wallMat);
     wallMesh.position.y = wallH / 2;
-    wallMesh.castShadow = true;
-    wallMesh.receiveShadow = true;
     registerPerformanceObject(wallMesh);
     houseGroup.add(wallMesh);
 
-    // Roof (pyramid via ConeGeometry with 4 sides)
-    const roofMat = new THREE.MeshStandardMaterial({ color: roofColors[i % roofColors.length], roughness: 0.7 });
+    const roofMat = new THREE.MeshLambertMaterial({ color: roofColors[i % roofColors.length] });
     const roofW = Math.max(w, d) * 0.72;
-    const roofH = 1.2 + rand() * 0.6;
+    const roofH = 1.2;
     const roof = new THREE.Mesh(new THREE.ConeGeometry(roofW, roofH, 4), roofMat);
     roof.position.y = wallH + roofH / 2;
     roof.rotation.y = Math.PI / 4;
-    roof.castShadow = true;
     registerPerformanceObject(roof);
     houseGroup.add(roof);
 
-    // Door
-    const doorMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.9, 0.05), doorMat);
-    door.position.set(0, 0.45, d / 2 + 0.01);
-    registerPerformanceObject(door);
-    houseGroup.add(door);
-
     houseGroup.position.set(x, 0, z);
     registerPerformanceObject(houseGroup);
-    scene.add(houseGroup);
+    outdoorGroup.add(houseGroup);
   });
 
-  // ── Rocks / boulders ────────────────────────────────────────────────────
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0x7a7a6a, roughness: 0.9, metalness: 0.0 });
-  for (let r = 0; r < 14; r++) {
+  // ── Rocks / boulders (6 rocks) ──────────────────────────────────────────
+  const rockMat = new THREE.MeshLambertMaterial({ color: 0x7a7a6a });
+  for (let r = 0; r < 6; r++) {
     let rx, rz;
     do {
-      rx = (rand() - 0.5) * 70;
-      rz = (rand() - 0.5) * 70;
-    } while (Math.abs(rx) < 6 && Math.abs(rz) < 6);
+      rx = (rand() - 0.5) * 40;
+      rz = -18 + (rand() - 0.5) * 44;
+    } while (Math.abs(rx) < 6 && Math.abs(rz + 18) < 6);
 
-    const rs = 0.15 + rand() * 0.35;
+    const rs = 0.2 + rand() * 0.3;
     const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rs, 0), rockMat);
     rock.position.set(rx, rs * 0.5, rz);
-    rock.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
-    rock.castShadow = true;
-    rock.receiveShadow = true;
     registerPerformanceObject(rock);
-    scene.add(rock);
+    outdoorGroup.add(rock);
   }
 
-  // ── Perimeter fence ──────────────────────────────────────────────────────
-  const postMat = new THREE.MeshStandardMaterial({ color: 0x6b4f2a, roughness: 0.85 });
-  const wireMat = new THREE.LineBasicMaterial({ color: 0x9e8060 });
-  const fenceR  = 32;
-  const postCount = 40;
+  // ── Perimeter fence (20 posts + single wire buffer) ─────────────────────
+  const postMat = new THREE.MeshLambertMaterial({ color: 0x6b4f2a });
+  const fenceR = 26;
+  const postCount = 20;
+  const wirePoints = [];
+
   for (let p = 0; p < postCount; p++) {
     const angle = (p / postCount) * Math.PI * 2;
     const fx = Math.cos(angle) * fenceR;
-    const fz = Math.sin(angle) * fenceR;
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.0, 6), postMat);
+    const fz = -18 + Math.sin(angle) * fenceR;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.0, 5), postMat);
     post.position.set(fx, 0.5, fz);
-    post.castShadow = true;
     registerPerformanceObject(post);
-    scene.add(post);
+    outdoorGroup.add(post);
 
-    // Wire between consecutive posts
     const nextAngle = ((p + 1) / postCount) * Math.PI * 2;
     const nx = Math.cos(nextAngle) * fenceR;
-    const nz = Math.sin(nextAngle) * fenceR;
-    const wGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(fx, 0.7, fz),
-      new THREE.Vector3(nx, 0.7, nz)
-    ]);
-    const fenceLine = new THREE.Line(wGeo, wireMat);
-    registerPerformanceObject(fenceLine);
-    scene.add(fenceLine);
-    const wGeo2 = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(fx, 0.35, fz),
-      new THREE.Vector3(nx, 0.35, nz)
-    ]);
-    const fenceLine2 = new THREE.Line(wGeo2, wireMat);
-    registerPerformanceObject(fenceLine2);
-    scene.add(fenceLine2);
+    const nz = -18 + Math.sin(nextAngle) * fenceR;
+    wirePoints.push(new THREE.Vector3(fx, 0.7, fz), new THREE.Vector3(nx, 0.7, nz));
+    wirePoints.push(new THREE.Vector3(fx, 0.35, fz), new THREE.Vector3(nx, 0.35, nz));
   }
+
+  const wireGeo = new THREE.BufferGeometry().setFromPoints(wirePoints);
+  const wireMat = new THREE.LineBasicMaterial({ color: 0x8d6e63 });
+  const fenceLines = new THREE.LineSegments(wireGeo, wireMat);
+  registerPerformanceObject(fenceLines);
+  outdoorGroup.add(fenceLines);
+}
+
+// ─── Indoor Hangar Environment ────────────────────────────────────────────
+function _buildIndoorEnvironment() {
+  // Concrete warehouse floor
+  const floorMat = new THREE.MeshLambertMaterial({ color: 0x222831 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(36, 52), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(0, 0, -18);
+  indoorGroup.add(floor);
+
+  // Floor border guide lines
+  const lineMat = new THREE.MeshBasicMaterial({ color: 0xffb300, transparent: true, opacity: 0.6 });
+  const lineL = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 48), lineMat);
+  lineL.rotation.x = -Math.PI / 2;
+  lineL.position.set(-15, 0.005, -18);
+  const lineR = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 48), lineMat);
+  lineR.rotation.x = -Math.PI / 2;
+  lineR.position.set(15, 0.005, -18);
+  indoorGroup.add(lineL, lineR);
+
+  // Hangar walls
+  const wallMat = new THREE.MeshLambertMaterial({ color: 0x323a45 });
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(36, 6, 0.4), wallMat);
+  backWall.position.set(0, 3, -44);
+  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(36, 6, 0.4), wallMat);
+  frontWall.position.set(0, 3, 8);
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 52), wallMat);
+  leftWall.position.set(-18, 3, -18);
+  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 52), wallMat);
+  rightWall.position.set(18, 3, -18);
+  indoorGroup.add(backWall, frontWall, leftWall, rightWall);
+
+  // Steel ceiling trusses
+  const trussMat = new THREE.MeshLambertMaterial({ color: 0x1e242d });
+  for (let z = -40; z <= 4; z += 8) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(36, 0.3, 0.3), trussMat);
+    beam.position.set(0, 5.8, z);
+    indoorGroup.add(beam);
+  }
+
+  // Ceiling lamps (visual only)
+  const lampMat = new THREE.MeshBasicMaterial({ color: 0xfff8e1 });
+  for (let z = -36; z <= 0; z += 12) {
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(3, 0.08, 0.3), lampMat);
+    lamp.position.set(0, 5.7, z);
+    indoorGroup.add(lamp);
+  }
+
+  // Start pad
+  const padMat = new THREE.MeshLambertMaterial({ color: 0x37474f });
+  const startPad = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.001, 24), padMat);
+  startPad.position.set(0, 0.025, 0);
+  indoorGroup.add(startPad);
+
+  // H marker
+  const hMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  [
+    { sx: 0.06, sz: 0.32, px: -0.18, pz: 0 },
+    { sx: 0.06, sz: 0.32, px:  0.18, pz: 0 },
+    { sx: 0.34, sz: 0.06, px:   0,   pz: 0 },
+  ].forEach(({ sx, sz, px, pz }) => {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.005, sz), hMat);
+    bar.position.set(px, 0.033, pz);
+    indoorGroup.add(bar);
+  });
 }
 
 // ─── Drone mesh – improved polygon quality ────────────────────────────────
@@ -650,15 +690,11 @@ function _buildDrone() {
     ledMeshes.push(led);
   });
 
-  // Motor lights (point lights, still exported for physics.js ramp animation)
-  motorLights = propPositions.map(([x, y, z], i) => {
-    const light = new THREE.PointLight(ledDefs[i] ? ledDefs[i].color : 0xffffff, 0, 0.5);
-    light.position.set(x, y + 0.02, z);
-    droneGroup.add(light);
-    // Also link led emissive intensity
-    light._led = ledMeshes[i];
-    return light;
-  });
+  // Motor lights (virtual proxies to avoid expensive PointLights on mobile)
+  motorLights = ledMeshes.map(led => ({
+    intensity: 0,
+    _led: led
+  }));
 
   droneGroup.position.set(0, 0.02, 0);
   scene.add(droneGroup);
