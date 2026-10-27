@@ -113,7 +113,7 @@ export function initScene() {
     );
     const w = pick(container?.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0);
     const h = pick(container?.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0);
-    return { w, h };
+    return { w: Math.max(w, 320), h: Math.max(h, 240) }; // Prevent 0/NaN dimensions
   };
   const applyViewportSize = () => {
     const { w, h } = getViewportSize();
