@@ -65,8 +65,18 @@ export function registerPerformanceObject(obj, kind = 'environment') {
 export function updatePerformanceSettings() {
   if (!renderer) return;
   const lowPower = PERFORMANCE.lowPowerMode;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.0 : 1.25));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPower ? 1.0 : 1.25));
   renderer.shadowMap.enabled = !lowPower && PERFORMANCE.shadows;
+
+  // Recalculate camera aspect ratio and viewport buffer dimensions
+  if (camera) {
+    const container = document.getElementById('canvas-container');
+    const w = container?.clientWidth || window.innerWidth || 1;
+    const h = container?.clientHeight || window.innerHeight || 1;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
+  }
 
   performanceClouds.forEach(obj => {
     obj.visible = !lowPower && PERFORMANCE.environment;
@@ -362,7 +372,7 @@ export function initScene() {
   _buildIndoorEnvironment();
   setEnvironmentMode(false);
 
-  // ── Drone mesh ───────────────────────────────────────────────────────────
+  // Drone mesh
   _buildDrone();
 
   // Initial camera position
@@ -374,7 +384,10 @@ export function initScene() {
     updatePerformanceSettings();
   };
 
+  // Configure DPR & performance first, then apply the correct viewport size
   updatePerformanceSettings();
+  applyViewportSize();
+
   window.addEventListener('resize', handleResize);
   window.addEventListener('orientationchange', () => {
     setTimeout(handleResize, 100);
@@ -382,8 +395,6 @@ export function initScene() {
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', handleResize);
   }
-}
-
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
 function _buildEnvironment() {
   const rand = seededRand(42);
