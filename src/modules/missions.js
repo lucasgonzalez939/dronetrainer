@@ -12,7 +12,7 @@ import {
   timerRunning, setTimerRunning,
   levelLandingPad, levelGates,
   currentLevel, setCurrentLevel,
-  isFreestyleMode,
+  isFreestyleMode, fsFreestyleGates,
   softCheckpoints, activeSoftCheckpointIdx, activeRespawnCheckpoint,
   gateScores, setGateScores,
   levelStars, setLevelStars,
@@ -236,6 +236,23 @@ export function getLevelStarsText() {
 }
 
 export function getCurrentTargetPos() {
+  if (isFreestyleMode) {
+    let nearest = null;
+    let minDist = Infinity;
+    if (Array.isArray(fsFreestyleGates)) {
+      for (const g of fsFreestyleGates) {
+        if (g && !g._passed && g.center) {
+          const d = Math.hypot(g.center.x - drone.pos.x, g.center.z - drone.pos.z);
+          if (d < minDist) {
+            minDist = d;
+            nearest = g.center;
+          }
+        }
+      }
+    }
+    return nearest;
+  }
+
   if (currentMissionIdx >= missions.length) {
     return levelLandingPad && levelLandingPad.center ? levelLandingPad.center : null;
   }

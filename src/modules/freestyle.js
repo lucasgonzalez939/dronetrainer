@@ -3,7 +3,7 @@
  */
 
 import * as THREE from './three.js';
-import { setEnvironmentMode } from './scene.js';
+import { scene, setEnvironmentMode } from './scene.js';
 import {
   FlightState, drone,
   levelObjects, setLevelObjects,

@@ -24,10 +24,15 @@ let currentTab = 'academy'; // 'academy' | 'challenges'
 function fadeAndRun(fn) {
   levelFade.classList.add('fade-out');
   setTimeout(() => {
-    fn();
-    levelFade.classList.remove('fade-out');
-    levelFade.classList.add('fade-in');
-    setTimeout(() => levelFade.classList.remove('fade-in'), 360);
+    try {
+      fn();
+    } catch (err) {
+      console.error('[DroneTrainer] Error during mode transition:', err);
+    } finally {
+      levelFade.classList.remove('fade-out');
+      levelFade.classList.add('fade-in');
+      setTimeout(() => levelFade.classList.remove('fade-in'), 360);
+    }
   }, 360);
 }
 
