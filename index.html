@@ -31,6 +31,16 @@
     </div>
   </div>
 
+  <!-- Floating PWA / Web Update Banner -->
+  <div id="update-banner" class="update-banner" style="display:none;">
+    <div class="update-banner-content">
+      <span class="update-banner-icon" id="update-banner-icon">🔄</span>
+      <span class="update-banner-text" id="update-banner-text">Actualizando...</span>
+      <button class="update-banner-btn" id="update-banner-btn" style="display:none;">APLICAR</button>
+      <button class="update-banner-close" id="update-banner-close" title="Ocultar aviso">✕</button>
+    </div>
+  </div>
+
   <!-- Level intro / completion overlay -->
   <div id="level-overlay">
     <h1 id="ov-level-title">NIVEL 1</h1>
@@ -46,370 +56,423 @@
   <!-- Config menu overlay -->
   <div id="config-overlay">
     <div id="config-panel">
-      <h2>
-        <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        CONFIGURACIÓN
-      </h2>
+      <div class="cfg-header">
+        <h2>
+          <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          CONFIGURACIÓN
+        </h2>
+        <button id="btn-config-close-x" class="cfg-close-x" title="Cerrar ventana">✕</button>
+      </div>
 
-      <!-- Speed preset -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">VELOCIDAD DE RESPUESTA</div>
-        <div class="cfg-speed-row">
-          <button class="cfg-speed-btn active" id="cfg-speed-slow" data-speed="slow">🐢 LENTO</button>
-          <button class="cfg-speed-btn" id="cfg-speed-normal" data-speed="normal">🎯 NORMAL</button>
-          <button class="cfg-speed-btn" id="cfg-speed-fast" data-speed="fast">⚡ RÁPIDO</button>
+      <!-- Category Navigation Tabs -->
+      <div class="cfg-tabs">
+        <button class="cfg-tab-btn active" data-cfg-tab="controls">🎮 MANDOS</button>
+        <button class="cfg-tab-btn" data-cfg-tab="difficulty">🎯 DIFICULTAD</button>
+        <button class="cfg-tab-btn" data-cfg-tab="camera">👁️ CÁMARA</button>
+        <button class="cfg-tab-btn" data-cfg-tab="graphics">⚙️ GRÁFICOS</button>
+      </div>
+
+      <!-- Tab Content 1: Mandos (Controls) -->
+      <div class="cfg-tab-content active" id="cfg-tab-controls">
+        <!-- Flight mode -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">MODO DE VUELO</div>
+          <div class="cfg-speed-row">
+            <button class="cfg-speed-btn active" id="cfg-mode-attitude" data-flightmode="attitude">🎯 ACTITUD</button>
+            <button class="cfg-speed-btn" id="cfg-mode-rate" data-flightmode="rate">⚡ ACRO (RATE)</button>
+          </div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:4px;padding:0 2px 4px;">
+            ACTITUD: auto-nivelado &nbsp;|&nbsp; ACRO: control de tasa (real FPV)
+          </div>
+        </div>
+
+        <!-- Speed preset -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">VELOCIDAD DE RESPUESTA</div>
+          <div class="cfg-speed-row">
+            <button class="cfg-speed-btn active" id="cfg-speed-slow" data-speed="slow">🐢 LENTO</button>
+            <button class="cfg-speed-btn" id="cfg-speed-normal" data-speed="normal">🎯 NORMAL</button>
+            <button class="cfg-speed-btn" id="cfg-speed-fast" data-speed="fast">⚡ RÁPIDO</button>
+          </div>
+        </div>
+
+        <!-- Joystick controls -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">SENSIBILIDAD Y CURVA</div>
+          <div class="cfg-slider-row">
+            <label>Sensibilidad</label>
+            <input type="range" id="cfg-joy-sensitivity" min="0.3" max="2.0" step="0.05" value="1.0">
+            <span class="cfg-slider-value" id="cfg-joy-sensitivity-val">1.0</span>
+          </div>
+
+          <div class="cfg-slider-row">
+            <label>Curva</label>
+            <input type="range" id="cfg-joy-curve" min="1.0" max="4.0" step="0.1" value="3.0">
+            <span class="cfg-slider-value" id="cfg-joy-curve-val">3.0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.3);margin-top:-4px;padding:0 2px 6px;">
+            <span>LINEAL</span><span>EXPONENCIAL</span>
+          </div>
+
+          <div class="cfg-slider-row">
+            <label>Zona muerta</label>
+            <input type="range" id="cfg-joy-deadzone" min="0" max="0.25" step="0.01" value="0.05">
+            <span class="cfg-slider-value" id="cfg-joy-deadzone-val">5%</span>
+          </div>
+        </div>
+
+        <!-- Expo curve preview -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">CURVA DE EXPO (VISTA PREVIA)</div>
+          <canvas id="expo-curve-canvas" width="160" height="70" style="display:block;margin:0 auto 4px;border-radius:4px;background:rgba(0,0,0,0.3);"></canvas>
+        </div>
+
+        <!-- Keyboard hint -->
+        <div class="cfg-section" style="font-size:9px;color:rgba(255,255,255,0.3);line-height:1.7;">
+          <div class="cfg-section-title">TECLADO / GAMEPAD</div>
+          <div class="cfg-toggle-row" style="margin-bottom:6px;">
+            <div>
+              <div class="cfg-toggle-label" style="font-size:10px;">🎮 Intercambiar teclado</div>
+              <div class="cfg-toggle-sub" id="kbd-swap-hint">↑↓ Subir/Bajar · ←→ Girar · WASD Pitch/Roll</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-kbd-swap">
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+          Gamepad: Stick izq. Throttle+Yaw &nbsp; Stick der. Pitch+Roll
         </div>
       </div>
 
-      <!-- Joystick controls -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">MANDOS</div>
+      <!-- Tab Content 2: Dificultad (Difficulty) -->
+      <div class="cfg-tab-content" id="cfg-tab-difficulty">
+        <div class="cfg-section">
+          <div class="cfg-section-title">DESAFÍOS Y FACTORES AMBIENTALES</div>
 
-        <div class="cfg-slider-row">
-          <label>Sensibilidad</label>
-          <input type="range" id="cfg-joy-sensitivity" min="0.3" max="2.0" step="0.05" value="1.0">
-          <span class="cfg-slider-value" id="cfg-joy-sensitivity-val">1.0</span>
-        </div>
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">🔋 Batería limitada</div>
+              <div class="cfg-toggle-sub">Tiempo máximo para completar la misión</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-battery-on">
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+          <div class="cfg-slider-row" id="cfg-battery-slider-row" style="display:none">
+            <label>Tiempo</label>
+            <input type="range" id="cfg-battery-time" min="30" max="300" step="10" value="120">
+            <span class="cfg-slider-value" id="cfg-battery-time-val">120s</span>
+          </div>
 
-        <div class="cfg-slider-row">
-          <label>Curva</label>
-          <input type="range" id="cfg-joy-curve" min="1.0" max="4.0" step="0.1" value="3.0">
-          <span class="cfg-slider-value" id="cfg-joy-curve-val">3.0</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.3);margin-top:-4px;padding:0 2px 6px;">
-          <span>LINEAL</span><span>EXPONENCIAL</span>
-        </div>
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">💨 Viento</div>
+              <div class="cfg-toggle-sub">Fuerza de viento lateral en vuelo</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-wind-on">
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+          <div class="cfg-slider-row" id="cfg-wind-slider-row" style="display:none">
+            <label>Intensidad</label>
+            <input type="range" id="cfg-wind-strength" min="0" max="5" step="0.5" value="1">
+            <span class="cfg-slider-value" id="cfg-wind-strength-val">1.0</span>
+          </div>
 
-        <div class="cfg-slider-row">
-          <label>Zona muerta</label>
-          <input type="range" id="cfg-joy-deadzone" min="0" max="0.25" step="0.01" value="0.05">
-          <span class="cfg-slider-value" id="cfg-joy-deadzone-val">5%</span>
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">🌀 Turbulencia</div>
+              <div class="cfg-toggle-sub">Sacudidas aleatorias durante el vuelo</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-turb-on">
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+          <div class="cfg-slider-row" id="cfg-turb-slider-row" style="display:none">
+            <label>Intensidad</label>
+            <input type="range" id="cfg-turb-strength" min="0" max="5" step="0.5" value="1">
+            <span class="cfg-slider-value" id="cfg-turb-strength-val">1.0</span>
+          </div>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">⚡ VPS / Deriva</div>
+              <div class="cfg-toggle-sub">Zonas de pérdida de posicionamiento</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-vps-on">
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">🚨 Simular desconexión</div>
+              <div class="cfg-toggle-sub">Corta el enlace: sin control y descenso de emergencia</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-emergency-disconnect">
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
         </div>
       </div>
 
-      <!-- Difficulty toggles -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">DIFICULTAD</div>
+      <!-- Tab Content 3: Cámara (Camera & Visual Aids) -->
+      <div class="cfg-tab-content" id="cfg-tab-camera">
+        <!-- Camera parameters -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">CÁMARA DE SEGUIMIENTO (3ª PERSONA)</div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">🔋 Batería limitada</div>
-            <div class="cfg-toggle-sub">Tiempo máximo para completar la misión</div>
+          <div class="cfg-slider-row">
+            <label>Retardo giro</label>
+            <input type="range" id="cfg-cam-smoothing" min="0" max="0.22" step="0.01" value="0.06">
+            <span class="cfg-slider-value" id="cfg-cam-smoothing-val">0.06</span>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-battery-on">
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
-        <div class="cfg-slider-row" id="cfg-battery-slider-row" style="display:none">
-          <label>Tiempo</label>
-          <input type="range" id="cfg-battery-time" min="30" max="300" step="10" value="120">
-          <span class="cfg-slider-value" id="cfg-battery-time-val">120s</span>
-        </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">💨 Viento</div>
-            <div class="cfg-toggle-sub">Fuerza de viento lateral en vuelo</div>
+          <div class="cfg-slider-row">
+            <label>Distancia</label>
+            <input type="range" id="cfg-cam-distance" min="1.0" max="3.5" step="0.1" value="1.8">
+            <span class="cfg-slider-value" id="cfg-cam-distance-val">1.8m</span>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-wind-on">
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
-        <div class="cfg-slider-row" id="cfg-wind-slider-row" style="display:none">
-          <label>Intensidad</label>
-          <input type="range" id="cfg-wind-strength" min="0" max="5" step="0.5" value="1">
-          <span class="cfg-slider-value" id="cfg-wind-strength-val">1.0</span>
+
+          <div class="cfg-slider-row">
+            <label>Altura</label>
+            <input type="range" id="cfg-cam-height" min="0.3" max="1.4" step="0.05" value="0.75">
+            <span class="cfg-slider-value" id="cfg-cam-height-val">0.75m</span>
+          </div>
         </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">🌀 Turbulencia</div>
-            <div class="cfg-toggle-sub">Sacudidas aleatorias durante el vuelo</div>
+        <!-- Pilot / FPV frames -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">VISTA PILOTO Y FPV</div>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">📺 Marco de cámara</div>
+              <div class="cfg-toggle-sub">Muestra el frame tipo mando del dron</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-pilot-frame">
+              <span class="cfg-toggle-track"></span>
+            </label>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-turb-on">
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
-        <div class="cfg-slider-row" id="cfg-turb-slider-row" style="display:none">
-          <label>Intensidad</label>
-          <input type="range" id="cfg-turb-strength" min="0" max="5" step="0.5" value="1">
-          <span class="cfg-slider-value" id="cfg-turb-strength-val">1.0</span>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">🌀 Ayuda de aspas FPV</div>
+              <div class="cfg-toggle-sub">Muestra pistas laterales de motores/aspas en vista FPV</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-fpv-blade-aid" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="cfg-slider-row">
+            <label>Punto piloto</label>
+            <select id="cfg-pilot-spot" class="cfg-select" aria-label="Punto de cámara piloto">
+              <option value="startPad">Helipuerto</option>
+              <option value="westStand">Lateral oeste</option>
+              <option value="eastStand">Lateral este</option>
+              <option value="farTower">Vista lejana</option>
+            </select>
+            <span class="cfg-slider-value"></span>
+          </div>
+
+          <div class="cfg-slider-row">
+            <label>Tamaño FPV</label>
+            <select id="cfg-pilot-frame-size" class="cfg-select" aria-label="Tamaño del cuadro FPV en vista piloto">
+              <option value="auto" selected>Auto</option>
+              <option value="small">Pequeño</option>
+              <option value="medium">Medio</option>
+              <option value="large">Grande</option>
+            </select>
+            <span class="cfg-slider-value"></span>
+          </div>
         </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">⚡ VPS / Deriva</div>
-            <div class="cfg-toggle-sub">Zonas de pérdida de posicionamiento</div>
-          </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-vps-on">
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
+        <!-- Flight visual aids -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">ASISTENCIA VISUAL EN VUELO</div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">🚨 Simular desconexión</div>
-            <div class="cfg-toggle-sub">Corta el enlace: sin control y descenso de emergencia</div>
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">🧭 Ayudas de vuelo global</div>
+              <div class="cfg-toggle-sub">Activa/desactiva todos los elementos de asistencia</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-flight-aids" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-emergency-disconnect">
-            <span class="cfg-toggle-track"></span>
-          </label>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">VPS beam</div>
+              <div class="cfg-toggle-sub">Luz/volumen de pérdida de posición</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-vps-beam" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">Anillo de dirección</div>
+              <div class="cfg-toggle-sub">Indicador circular de giro y orientación</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-heading-ring" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">Sombra del dron</div>
+              <div class="cfg-toggle-sub">Sombra proyectada en el suelo</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-drone-shadow" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">Traza del vuelo</div>
+              <div class="cfg-toggle-sub">Línea de recorrido de la trayectoria</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-trail" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">Anillo de altitud</div>
+              <div class="cfg-toggle-sub">Indicador de altura alrededor del dron</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-alt-ring" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
+          </div>
         </div>
       </div>
 
-      <!-- Performance -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">CALIDAD GRÁFICA</div>
-        <div class="cfg-speed-row" style="margin-bottom:12px;">
-          <button class="cfg-speed-btn" id="cfg-quality-low" data-quality="low">📱 BAJO (Tablet)</button>
-          <button class="cfg-speed-btn active" id="cfg-quality-med" data-quality="med">🎯 MEDIO</button>
-          <button class="cfg-speed-btn" id="cfg-quality-high" data-quality="high">⚡ ALTO</button>
-        </div>
-
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">⚙️ Modo bajo consumo</div>
-            <div class="cfg-toggle-sub">Reduce sombras, entorno y resolución</div>
+      <!-- Tab Content 4: Gráficos (Graphics & Performance) -->
+      <div class="cfg-tab-content" id="cfg-tab-graphics">
+        <!-- Performance -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">CALIDAD GRÁFICA RÁPIDA</div>
+          <div class="cfg-speed-row" style="margin-bottom:12px;">
+            <button class="cfg-speed-btn" id="cfg-quality-low" data-quality="low">📱 BAJO (Tablet)</button>
+            <button class="cfg-speed-btn active" id="cfg-quality-med" data-quality="med">🎯 MEDIO</button>
+            <button class="cfg-speed-btn" id="cfg-quality-high" data-quality="high">⚡ ALTO</button>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-low-power">
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">🌑 Sombras</div>
-            <div class="cfg-toggle-sub">Desactiva sombras dinámicas del mundo</div>
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">⚙️ Modo bajo consumo</div>
+              <div class="cfg-toggle-sub">Reduce sombras, entorno y resolución</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-low-power">
+              <span class="cfg-toggle-track"></span>
+            </label>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-shadows">
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">🌿 Entorno detallado</div>
-            <div class="cfg-toggle-sub">Oculta árboles, rocas y vallas decorativas</div>
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">🌑 Sombras</div>
+              <div class="cfg-toggle-sub">Desactiva sombras dinámicas del mundo</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-shadows">
+              <span class="cfg-toggle-track"></span>
+            </label>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-env-detail" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">💨 Partículas de viento</div>
-            <div class="cfg-toggle-sub">Reduce partículas de deriva atmosférica</div>
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">🌿 Entorno detallado</div>
+              <div class="cfg-toggle-sub">Oculta árboles, rocas y vallas decorativas</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-env-detail" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-wind-particles" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">🧭 Ayudas de vuelo</div>
-            <div class="cfg-toggle-sub">Activa/desactiva todos los elementos de asistencia</div>
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">💨 Partículas de viento</div>
+              <div class="cfg-toggle-sub">Reduce partículas de deriva atmosférica</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-wind-particles" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-flight-aids" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
         </div>
-      </div>
 
-      <!-- Flight aids -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">ASISTENCIA VISUAL</div>
+        <!-- Environment -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">ILUMINACIÓN Y ENTORNO</div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">VPS beam</div>
-            <div class="cfg-toggle-sub">Luz/volumen de pérdida de posición</div>
+          <div class="cfg-slider-row">
+            <label>Hora del día</label>
+            <input type="range" id="cfg-time-of-day" min="0" max="1" step="0.05" value="0.5">
+            <span class="cfg-slider-value" id="cfg-time-of-day-val">🌅</span>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-vps-beam" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">Anillo de dirección</div>
-            <div class="cfg-toggle-sub">Indicador circular de giro y orientación</div>
+          <div class="cfg-slider-row">
+            <label>Niebla</label>
+            <input type="range" id="cfg-fog-density" min="0.002" max="0.06" step="0.002" value="0.008">
+            <span class="cfg-slider-value" id="cfg-fog-density-val">0.008</span>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-heading-ring" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
         </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">Sombra del dron</div>
-            <div class="cfg-toggle-sub">Sombra en el suelo</div>
+        <!-- Replay -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">REPETICIÓN</div>
+          <button id="btn-start-replay" class="cfg-speed-btn" style="width:100%">▶ VER REPETICIÓN DE VUELO</button>
+          <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:4px;">Disponible tras completar un nivel</div>
+        </div>
+
+        <!-- Version & PWA Updates -->
+        <div class="cfg-section">
+          <div class="cfg-section-title">VERSIÓN Y ACTUALIZACIONES</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div>
+              <div style="font-size:12px; color:#fff; font-weight:bold;">DroneTrainer EDU</div>
+              <div id="cfg-app-version" style="font-size:10px; color:rgba(255,255,255,0.45);">v2.2.0 · PWA Offline</div>
+            </div>
+            <button id="btn-check-updates" class="cfg-speed-btn" style="flex:none; padding:7px 12px; font-size:10px;">
+              🔄 BUSCAR AHORA
+            </button>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-drone-shadow" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
 
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">Traza del vuelo</div>
-            <div class="cfg-toggle-sub">Línea de recorrido de la trayectoria</div>
+          <div class="cfg-toggle-row" style="margin-top:10px;">
+            <div>
+              <div class="cfg-toggle-label">🔄 Actualizaciones automáticas</div>
+              <div class="cfg-toggle-sub">Descarga y aplica novedades al conectar a internet</div>
+            </div>
+            <label class="cfg-toggle">
+              <input type="checkbox" id="cfg-auto-updates" checked>
+              <span class="cfg-toggle-track"></span>
+            </label>
           </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-trail" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
+
+          <div id="cfg-update-status" style="font-size:10px; color:#ff9800; min-height:14px; margin-top:6px;"></div>
         </div>
-
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">Anillo de altitud</div>
-            <div class="cfg-toggle-sub">Indicador de altura alrededor del dron</div>
-          </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-alt-ring" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Camera -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">CÁMARA</div>
-
-        <div class="cfg-slider-row">
-          <label>Retardo giro</label>
-          <input type="range" id="cfg-cam-smoothing" min="0" max="0.22" step="0.01" value="0.06">
-          <span class="cfg-slider-value" id="cfg-cam-smoothing-val">0.06</span>
-        </div>
-
-        <div class="cfg-slider-row">
-          <label>Distancia</label>
-          <input type="range" id="cfg-cam-distance" min="1.0" max="3.5" step="0.1" value="1.8">
-          <span class="cfg-slider-value" id="cfg-cam-distance-val">1.8m</span>
-        </div>
-
-        <div class="cfg-slider-row">
-          <label>Altura</label>
-          <input type="range" id="cfg-cam-height" min="0.3" max="1.4" step="0.05" value="0.75">
-          <span class="cfg-slider-value" id="cfg-cam-height-val">0.75m</span>
-        </div>
-
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">📺 Marco de cámara</div>
-            <div class="cfg-toggle-sub">Muestra el frame tipo mando del dron</div>
-          </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-pilot-frame">
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
-
-        <div class="cfg-toggle-row">
-          <div>
-            <div class="cfg-toggle-label">🌀 Ayuda de aspas FPV</div>
-            <div class="cfg-toggle-sub">Muestra pistas laterales de motores/aspas en vista FPV</div>
-          </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-fpv-blade-aid" checked>
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
-
-        <div class="cfg-slider-row">
-          <label>Punto piloto</label>
-          <select id="cfg-pilot-spot" class="cfg-select" aria-label="Punto de cámara piloto">
-            <option value="startPad">Helipuerto</option>
-            <option value="westStand">Lateral oeste</option>
-            <option value="eastStand">Lateral este</option>
-            <option value="farTower">Vista lejana</option>
-          </select>
-          <span class="cfg-slider-value"></span>
-        </div>
-
-        <div class="cfg-slider-row">
-          <label>Tamaño FPV</label>
-          <select id="cfg-pilot-frame-size" class="cfg-select" aria-label="Tamaño del cuadro FPV en vista piloto">
-            <option value="auto" selected>Auto</option>
-            <option value="small">Pequeño</option>
-            <option value="medium">Medio</option>
-            <option value="large">Grande</option>
-          </select>
-          <span class="cfg-slider-value"></span>
-        </div>
-      </div>
-
-      <!-- Flight mode -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">MODO DE VUELO</div>
-        <div class="cfg-speed-row">
-          <button class="cfg-speed-btn active" id="cfg-mode-attitude" data-flightmode="attitude">🎯 ACTITUD</button>
-          <button class="cfg-speed-btn" id="cfg-mode-rate" data-flightmode="rate">⚡ ACRO (RATE)</button>
-        </div>
-        <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:4px;padding:0 2px 4px;">
-          ACTITUD: auto-nivelado &nbsp;|&nbsp; ACRO: control de tasa (real FPV)
-        </div>
-      </div>
-
-      <!-- Environment -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">ENTORNO</div>
-
-        <div class="cfg-slider-row">
-          <label>Hora del día</label>
-          <input type="range" id="cfg-time-of-day" min="0" max="1" step="0.05" value="0.5">
-          <span class="cfg-slider-value" id="cfg-time-of-day-val">🌅</span>
-        </div>
-
-        <div class="cfg-slider-row">
-          <label>Niebla</label>
-          <input type="range" id="cfg-fog-density" min="0.002" max="0.06" step="0.002" value="0.008">
-          <span class="cfg-slider-value" id="cfg-fog-density-val">0.008</span>
-        </div>
-      </div>
-
-      <!-- Expo curve preview -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">CURVA DE EXPO (VISTA PREVIA)</div>
-        <canvas id="expo-curve-canvas" width="160" height="80" style="display:block;margin:0 auto 4px;border-radius:4px;background:rgba(0,0,0,0.3);"></canvas>
-      </div>
-
-      <!-- Replay -->
-      <div class="cfg-section">
-        <div class="cfg-section-title">REPETICIÓN</div>
-        <button id="btn-start-replay" class="cfg-speed-btn" style="width:100%">▶ VER REPETICIÓN DE VUELO</button>
-        <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:4px;">Disponible tras completar un nivel</div>
-      </div>
-
-      <!-- Keyboard hint -->
-      <div class="cfg-section" style="font-size:9px;color:rgba(255,255,255,0.3);line-height:1.7;">
-        <div class="cfg-section-title">TECLADO / GAMEPAD</div>
-        <div class="cfg-toggle-row" style="margin-bottom:6px;">
-          <div>
-            <div class="cfg-toggle-label" style="font-size:10px;">🎮 Intercambiar teclado</div>
-            <div class="cfg-toggle-sub" id="kbd-swap-hint">↑↓ Subir/Bajar · ←→ Girar · WASD Pitch/Roll</div>
-          </div>
-          <label class="cfg-toggle">
-            <input type="checkbox" id="cfg-kbd-swap">
-            <span class="cfg-toggle-track"></span>
-          </label>
-        </div>
-        Gamepad: Stick izq. Throttle+Yaw &nbsp; Stick der. Pitch+Roll
       </div>
 
       <button id="btn-config-close">CERRAR</button>

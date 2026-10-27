@@ -4,7 +4,7 @@
  * falls back to Cache for complete offline functionality.
  */
 
-const CACHE_NAME = 'dronetrainer-v2';
+const CACHE_NAME = 'dronetrainer-v2.2.0';
 
 // Base path detection (supports both /dronetrainer/ and /)
 const BASE = self.registration.scope.endsWith('/')
@@ -38,51 +38,91 @@ const RELATIVE_ASSETS = [
   'src/modules/flightState.js',
   'src/modules/overlays.js',
   'src/modules/progress.js',
-  'src/modules/loop.js'
+  'src/modules/loop.js',
+  'src/modules/updater.js'
 ];
 
-const PRECACHE_URLS = RELATIVE_ASSETS.map(p => new URL(p, BASE).pathname);
+// Precache URLs as absolute strings so cache matching is exact across all platforms
+const PRECACHE_URLS = RELATIVE_ASSETS.map(p => new URL(p, BASE).href);
 
-// Install: precache all core assets
+// Precache helper
+async function precacheAll(cache) {
+  await Promise.all(
+    PRECACHE_URLS.map(async url => {
+      try {
+        const resp = await fetch(url, { cache: 'reload' });
+        if (resp && resp.status === 200) {
+          await cache.put(url, resp);
+        }
+      } catch (e) {
+        console.warn('[SW] Could not precache:', url, e);
+      }
+    })
+  );
+}
+
+// Install: precache all core assets and activate immediately
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(async cache => {
-      await Promise.all(
-        PRECACHE_URLS.map(async url => {
-          try {
-            const resp = await fetch(url, { cache: 'no-cache' });
-            if (resp && resp.status === 200) {
-              await cache.put(url, resp);
-            }
-          } catch (e) {
-            console.warn('[SW] Could not precache:', url, e);
-          }
-        })
-      );
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then(cache => precacheAll(cache))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate: delete any old caches (v1, etc.) and claim clients
+// Activate: delete any old caches (v1, v2, etc.) and claim clients
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
         keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
       )
-    ).then(() => self.clients.claim())
+    ).then(() => self.clients.claim()).then(async () => {
+      const clients = await self.clients.matchAll();
+      clients.forEach(c => c.postMessage({ type: 'SW_ACTIVATED', cacheName: CACHE_NAME }));
+    })
   );
 });
 
+// Message listener for client coordination
+self.addEventListener('message', event => {
+  if (!event.data) return;
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data.type === 'REFRESH_CACHE') {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then(async cache => {
+        await precacheAll(cache);
+        const clients = await self.clients.matchAll();
+        clients.forEach(c => c.postMessage({ type: 'CACHE_REFRESHED', cacheName: CACHE_NAME }));
+      })
+    );
+  }
+});
+
 // Fetch strategy:
-// For navigation (HTML) & scripts/styles: network-first with cache fallback
-// For static vendor/images: cache-first with network fallback
+// 1. version.json: NEVER cache; direct network-only so version checking is live
+// 2. Static vendor/icons: cache-first with network fallback
+// 3. Navigation & code: network-first with cache fallback
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
   // Ignore cross-origin non-http(s) requests
   if (!url.protocol.startsWith('http')) return;
+
+  // version.json is strictly live network
+  if (url.pathname.endsWith('/version.json') || url.pathname.endsWith('version.json')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).catch(() => {
+        return new Response(JSON.stringify({ offline: true }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
+    return;
+  }
 
   const isStaticVendorOrIcon = url.pathname.includes('/vendor/') || url.pathname.includes('/icons/');
 
@@ -113,7 +153,7 @@ self.addEventListener('fetch', event => {
           return caches.match(event.request).then(cached => {
             if (cached) return cached;
             if (event.request.mode === 'navigate') {
-              return caches.match(new URL('index.html', BASE).pathname);
+              return caches.match(new URL('index.html', BASE).href);
             }
           });
         })

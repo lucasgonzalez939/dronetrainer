@@ -23,6 +23,7 @@ import {
   emergencyDisconnect, setEmergencyDisconnect
 } from './modules/state.js';
 import { startLoop, startReplay } from './modules/loop.js';
+import { initUpdater } from './modules/updater.js';
 
 // ── Initialise Three.js scene ──
 initScene();
@@ -54,11 +55,52 @@ btnTakeoff.addEventListener('click', () => {
 });
 
 // ── Config menu ──
+const configOverlay = document.getElementById('config-overlay');
+const btnConfigCloseX = document.getElementById('btn-config-close-x');
+const btnConfigClose = document.getElementById('btn-config-close');
+
 document.getElementById('btn-open-config').addEventListener('click', () => {
-  document.getElementById('config-overlay').classList.add('active');
+  if (configOverlay) {
+    configOverlay.classList.add('active');
+    drawExpoCurve();
+  }
 });
-document.getElementById('btn-config-close').addEventListener('click', () => {
-  document.getElementById('config-overlay').classList.remove('active');
+
+if (btnConfigClose) {
+  btnConfigClose.addEventListener('click', () => {
+    configOverlay.classList.remove('active');
+  });
+}
+
+if (btnConfigCloseX) {
+  btnConfigCloseX.addEventListener('click', () => {
+    configOverlay.classList.remove('active');
+  });
+}
+
+// Close config overlay when clicking or tapping outside the config panel
+if (configOverlay) {
+  configOverlay.addEventListener('click', (e) => {
+    if (e.target === configOverlay) {
+      configOverlay.classList.remove('active');
+    }
+  });
+}
+
+// Config tab switching (Mandos, Dificultad, Cámara, Gráficos)
+const cfgTabBtns = document.querySelectorAll('.cfg-tab-btn');
+const cfgTabContents = document.querySelectorAll('.cfg-tab-content');
+cfgTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetTab = btn.dataset.cfgTab;
+    cfgTabBtns.forEach(b => b.classList.toggle('active', b === btn));
+    cfgTabContents.forEach(content => {
+      content.classList.toggle('active', content.id === `cfg-tab-${targetTab}`);
+    });
+    if (targetTab === 'controls') {
+      drawExpoCurve();
+    }
+  });
 });
 
 // Speed preset buttons
@@ -619,12 +661,8 @@ document.querySelectorAll('.wind-btn').forEach(btn => {
   });
 });
 
-// ── Service Worker registration ──
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {
-    navigator.serviceWorker.register('/dronetrainer/sw.js').catch(() => {});
-  });
-}
+// ── PWA & Offline Updater ──
+initUpdater();
 
 // ── Show initial level overlay ──
 showLevelOverlay(0, false);

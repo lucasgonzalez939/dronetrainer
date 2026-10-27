@@ -10,6 +10,7 @@ import {
   timerRunning, setTimerRunning
 } from './state.js';
 import { updateBatteryBar } from './hud.js';
+import { notifyFlightStateChanged } from './updater.js';
 
 const btnTakeoff = document.getElementById('btn-takeoff');
 
@@ -62,6 +63,7 @@ export function setFlightState(newState) {
       drone.vel.set((Math.random()-0.5)*2.0, 0.5, (Math.random()-0.5)*2.0);
       break;
   }
+  notifyFlightStateChanged(newState);
 }
 
 export function applySpeedPreset(name) {

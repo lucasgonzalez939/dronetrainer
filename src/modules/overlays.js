@@ -199,6 +199,15 @@ export function initOverlayEvents() {
   document.getElementById('btn-levels').addEventListener('click', openLevelProgressOverlay);
   document.getElementById('lp-btn-close').addEventListener('click', closeLevelProgressOverlay);
 
+  const lpOverlay = document.getElementById('level-progress-overlay');
+  if (lpOverlay) {
+    lpOverlay.addEventListener('click', (e) => {
+      if (e.target === lpOverlay) {
+        closeLevelProgressOverlay();
+      }
+    });
+  }
+
   document.getElementById('lp-btn-freestyle').addEventListener('click', () => {
     closeLevelProgressOverlay();
     setCurrentLevel(0);
