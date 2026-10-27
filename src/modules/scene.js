@@ -395,6 +395,7 @@ export function initScene() {
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', handleResize);
   }
+}
 // ─── Environment: trees, houses, rocks ────────────────────────────────────
 function _buildEnvironment() {
   const rand = seededRand(42);
