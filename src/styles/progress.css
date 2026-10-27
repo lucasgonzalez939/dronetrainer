@@ -80,6 +80,42 @@
 }
 .lp-level-badge.done { background: rgba(0,230,118,0.15); color: #00e676; }
 .lp-level-badge.active { background: rgba(255,202,40,0.15); color: #ffca28; }
+.lp-level-badge.procedural {
+  background: rgba(156, 39, 176, 0.22);
+  color: #ce93d8;
+  border: 1px solid rgba(206, 147, 216, 0.35);
+}
+
+/* Tabs: Academia vs Desafíos */
+.lp-tab-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.lp-tab-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+}
+.lp-tab-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+.lp-tab-btn.active {
+  background: rgba(0, 229, 255, 0.16);
+  border-color: #00e5ff;
+  color: #00e5ff;
+}
 .lp-mode-row {
   display: flex;
   flex-wrap: wrap;

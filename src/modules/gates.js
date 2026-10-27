@@ -143,6 +143,7 @@ export function createLandingPad(x, z, color = 0xffeb3b) {
   const padMat = getLandingPadMaterial(color);
   const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.022, 24), padMat);
   pad.position.set(x, 0.011, z);
+  pad.center = new THREE.Vector3(x, 0.011, z);
   scene.add(pad);
 
   // Concentric outer ring

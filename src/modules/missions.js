@@ -181,14 +181,22 @@ export function checkMissionLanding() {
 
       const isLastLevel = (currentLevel >= LEVEL_DEFS.length - 1);
       if (isLastLevel) {
-        if (missionTitleEl) missionTitleEl.textContent = "🏆 ¡ACADEMIA COMPLETADA!";
+        if (missionTitleEl) missionTitleEl.textContent = "🏆 ¡DESAFÍO SUPREMO COMPLETADO!";
         if (missionTitleEl) missionTitleEl.style.color = "#ffd700";
-        if (missionDescEl)  missionDescEl.textContent  = "¡Has dominado todos los niveles! Eres un piloto élite.";
+        if (missionDescEl)  missionDescEl.textContent  = "¡Has dominado todos los desafíos avanzados del simulador!";
         setTimeout(() => showCompletionOverlay(), 1200);
+      } else if (currentLevel === 17) {
+        if (missionTitleEl) missionTitleEl.textContent = "🎓 ¡ACADEMIA COMPLETADA!";
+        if (missionTitleEl) missionTitleEl.style.color = "#ffd700";
+        if (missionDescEl)  missionDescEl.textContent  = "¡Graduación superada con éxito! Desbloqueados los 10 Desafíos Avanzados.";
+        setTimeout(() => {
+          setCurrentLevel(18);
+          showLevelOverlay(18, true);
+        }, 1800);
       } else {
         if (missionTitleEl) missionTitleEl.textContent = "¡NIVEL SUPERADO!";
         if (missionTitleEl) missionTitleEl.style.color = "#00e676";
-        if (missionDescEl)  missionDescEl.textContent  = `¡Prepárate para el ${LEVEL_DEFS[currentLevel + 1].name}!`;
+        if (missionDescEl)  missionDescEl.textContent  = `¡Prepárate para el ${LEVEL_DEFS[currentLevel + 1].name}: ${LEVEL_DEFS[currentLevel + 1].subtitle}!`;
         setTimeout(() => {
           setCurrentLevel(currentLevel + 1);
           showLevelOverlay(currentLevel, true);

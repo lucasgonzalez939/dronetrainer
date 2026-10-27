@@ -254,7 +254,7 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
       if (isRateMode) {
         // ── Rate / Acro mode: inputs control angular rates directly ──────
         const maxRate = CONFIG.MAX_RATE_SPEED; // rad/s
-        drone.pitchRate = -filteredInput.pitch * maxRate; // negative: stick forward → nose down
+        drone.pitchRate =  filteredInput.pitch * maxRate; // forward stick (pitch < 0) → negative pitchRate → nose pitches down
         drone.rollRate  =  filteredInput.roll  * maxRate;
         drone.yawRate   = -filteredInput.yaw   * CONFIG.MAX_YAW_RATE * 1.5;
         drone.pitch += drone.pitchRate * dt;
@@ -262,12 +262,11 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
 
         // No clamp – allow full 360° flips in acro mode
 
-        // Thrust along drone body axis (accounts for full orientation).
-        _thrustWorld.set(
-          -Math.sin(drone.roll) * Math.cos(drone.pitch),
-          Math.cos(drone.pitch) * Math.cos(drone.roll),
-          -Math.sin(drone.pitch)
-        );
+        // Thrust along drone body upward axis in world coordinates
+        _thrustWorld.set(0, 1, 0)
+          .applyAxisAngle(_rightAxis, drone.pitch)
+          .applyAxisAngle(_forwardAxis, drone.roll)
+          .applyAxisAngle(_upAxis, drone.yaw);
         const THRUST_SCALE_FACTOR = 4.0;
         const throttleNorm = (filteredInput.throttle + 1) * 0.5; // 0 to 1
         const thrustScale = CONFIG.MAX_VERT_SPEED * THRUST_SCALE_FACTOR * throttleNorm * avgRpm;
@@ -361,13 +360,14 @@ export function updateFlightPhysics(dt, elapsedTime, isFPVMode, currentLevel) {
   checkAndResolveCollisions();
 
   if (CONFIG.FLIGHT_MODE !== 'rate' || drone.state !== FlightState.FLYING) {
-    const forwardNorm = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
-    const rightNorm   = new THREE.Vector3(1,0, 0).applyAxisAngle(new THREE.Vector3(0,1,0), drone.yaw);
-    const localVx = drone.vel.dot(rightNorm);
-    const localVz = drone.vel.dot(forwardNorm);
+    _forward.set(0, 0, -1).applyAxisAngle(_upAxis, drone.yaw);
+    _right.set(1, 0, 0).applyAxisAngle(_upAxis, drone.yaw);
+    const localVx = drone.vel.dot(_right);
+    const localVz = drone.vel.dot(_forward);
 
+    // Quadcopters tilt in the direction of velocity (nose down when flying forward)
     const targetRoll  = -(localVx / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
-    const targetPitch =  (localVz / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
+    const targetPitch = -(localVz / CONFIG.MAX_SPEED) * CONFIG.TILT_FACTOR;
     const tiltLerp = 1.0 - Math.exp(-6.0 * dt);
     drone.roll  += (targetRoll  - drone.roll)  * tiltLerp;
     drone.pitch += (targetPitch - drone.pitch) * tiltLerp;

@@ -369,7 +369,6 @@ export function initScene() {
   camera.position.set(0, 0.8, 2.2);
   camera.lookAt(0, 0.1, 0);
 
-<<<<<<< HEAD
   const handleResize = () => {
     applyViewportSize();
     updatePerformanceSettings();
@@ -377,18 +376,11 @@ export function initScene() {
 
   updatePerformanceSettings();
   window.addEventListener('resize', handleResize);
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', handleResize);
-=======
-  updatePerformanceSettings();
-
-  window.addEventListener('resize', applyViewportSize);
   window.addEventListener('orientationchange', () => {
-    setTimeout(applyViewportSize, 100);
+    setTimeout(handleResize, 100);
   });
   if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', applyViewportSize);
->>>>>>> ab6d204 (major bug fixes)
+    window.visualViewport.addEventListener('resize', handleResize);
   }
 }
 

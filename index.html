@@ -38,6 +38,7 @@
     <p id="ov-desc">Aprende los controles básicos.</p>
     <ul id="ov-objectives"></ul>
     <button class="btn-overlay" id="btn-start-level">COMENZAR</button>
+    <button class="btn-overlay" id="btn-regen-level" style="display:none; background:#7b1fa2; margin-top:8px;">🎲 NUEVA VARIACIÓN</button>
     <button class="btn-overlay freestyle" id="btn-freestyle" style="display:none">🎮 MODO LIBRE</button>
     <button class="btn-overlay secondary" id="btn-prev-level" style="display:none">◀ NIVEL ANTERIOR</button>
   </div>
@@ -420,10 +421,16 @@
     <div id="level-progress-panel">
       <h2>
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#fff;stroke-width:2;fill:none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        ACADEMIA DE VUELO
+        PLAN DE ENTRENAMIENTO
       </h2>
 
-      <div class="lp-section-title">NIVELES</div>
+      <!-- Tab switcher: Academia vs Desafíos -->
+      <div class="lp-tab-row">
+        <button class="lp-tab-btn active" id="lp-tab-academy">🎓 ACADEMIA (18)</button>
+        <button class="lp-tab-btn" id="lp-tab-challenges">⚡ DESAFÍOS (10)</button>
+      </div>
+
+      <div class="lp-section-title" id="lp-section-header">CURSO DE APRENDIZAJE</div>
       <div id="lp-levels-list"></div>
 
       <div class="lp-section-title" style="margin-top:16px">MODOS</div>
