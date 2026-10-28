@@ -185,13 +185,21 @@ export function checkMissionLanding() {
         if (missionTitleEl) missionTitleEl.style.color = "#ffd700";
         if (missionDescEl)  missionDescEl.textContent  = "¡Has dominado todos los desafíos avanzados del simulador!";
         setTimeout(() => showCompletionOverlay(), 1200);
-      } else if (currentLevel === 17) {
+      } else if (currentLevel === 23) {
         if (missionTitleEl) missionTitleEl.textContent = "🎓 ¡ACADEMIA COMPLETADA!";
         if (missionTitleEl) missionTitleEl.style.color = "#ffd700";
-        if (missionDescEl)  missionDescEl.textContent  = "¡Graduación superada con éxito! Desbloqueados los 10 Desafíos Avanzados.";
+        if (missionDescEl)  missionDescEl.textContent  = "¡Graduación superada con éxito! Desbloqueados los 15 Desafíos Avanzados.";
         setTimeout(() => {
-          setCurrentLevel(18);
-          showLevelOverlay(18, true);
+          setCurrentLevel(24);
+          showLevelOverlay(24, true);
+        }, 1800);
+      } else if (currentLevel === 38) {
+        if (missionTitleEl) missionTitleEl.textContent = "⚡ ¡DESAFÍOS SUPERADOS!";
+        if (missionTitleEl) missionTitleEl.style.color = "#ffd700";
+        if (missionDescEl)  missionDescEl.textContent  = "¡Desafíos dominados! Desbloqueadas las 10 Misiones Operativas y de Filmación.";
+        setTimeout(() => {
+          setCurrentLevel(39);
+          showLevelOverlay(39, true);
         }, 1800);
       } else {
         if (missionTitleEl) missionTitleEl.textContent = "¡NIVEL SUPERADO!";

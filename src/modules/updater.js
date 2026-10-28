@@ -15,8 +15,8 @@
 
 import { FlightState, drone } from './state.js';
 
-export const APP_VERSION = '2.3.0';
-export const APP_BUILD = 1740660000000;
+export const APP_VERSION = '2.6.0';
+export const APP_BUILD = 1740690000000;
 
 const AUTO_UPDATE_STORAGE_KEY = 'dronetrainer_auto_updates_enabled';
 

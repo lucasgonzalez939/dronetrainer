@@ -1,5 +1,5 @@
 {
-  "version": "2.3.0",
-  "buildTime": 1740660000000,
-  "description": "Niveles modularizados en carpetas individuales, corrección y objetivos del Modo Desafío, y precaché offline completo."
+  "version": "2.6.0",
+  "buildTime": 1740690000000,
+  "description": "10 Misiones Operativas y de Cinematografía Aérea, y corrección del centrado de cámara/viewport en pantallas con alto pixel ratio (Lenovo Yoga y tablets)."
 }

@@ -214,6 +214,9 @@ export function setTimeOfDay(v) { timeOfDay = v; }
 export let fogDensity = 0.008;
 export function setFogDensity(v) { fogDensity = v; }
 
+export let operationalEntities = [];
+export function setOperationalEntities(v) { operationalEntities = v; }
+
 // Setters (needed because ES module bindings are live but not assignable from outside)
 export function setLevelObjects(v)    { levelObjects    = v; }
 export function setObstacles(v)       { obstacles       = v; }

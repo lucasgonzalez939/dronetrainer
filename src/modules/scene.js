@@ -62,6 +62,17 @@ export function registerPerformanceObject(obj, kind = 'environment') {
   }
 }
 
+export function getViewportSize() {
+  const container = document.getElementById('canvas-container');
+  const doc = document.documentElement || {};
+  const pick = (primary, fallbackA, fallbackB) => (
+    primary > 0 ? primary : (fallbackA > 0 ? fallbackA : (fallbackB > 0 ? fallbackB : 1))
+  );
+  const w = pick(container?.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0);
+  const h = pick(container?.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0);
+  return { w: Math.max(w, 320), h: Math.max(h, 240) };
+}
+
 export function updatePerformanceSettings() {
   if (!renderer) return;
   const lowPower = PERFORMANCE.lowPowerMode;
@@ -70,9 +81,7 @@ export function updatePerformanceSettings() {
 
   // Recalculate camera aspect ratio and viewport buffer dimensions
   if (camera) {
-    const container = document.getElementById('canvas-container');
-    const w = container?.clientWidth || window.innerWidth || 1;
-    const h = container?.clientHeight || window.innerHeight || 1;
+    const { w, h } = getViewportSize();
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
@@ -106,15 +115,6 @@ function seededRand(seed) {
 
 export function initScene() {
   const container = document.getElementById('canvas-container');
-  const getViewportSize = () => {
-    const doc = document.documentElement || {};
-    const pick = (primary, fallbackA, fallbackB) => (
-      primary > 0 ? primary : (fallbackA > 0 ? fallbackA : (fallbackB > 0 ? fallbackB : 1))
-    );
-    const w = pick(container?.clientWidth || 0, window.innerWidth || 0, doc.clientWidth || 0);
-    const h = pick(container?.clientHeight || 0, window.innerHeight || 0, doc.clientHeight || 0);
-    return { w: Math.max(w, 320), h: Math.max(h, 240) }; // Prevent 0/NaN dimensions
-  };
   const applyViewportSize = () => {
     const { w, h } = getViewportSize();
     camera.aspect = w / h;

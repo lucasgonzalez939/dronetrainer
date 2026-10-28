@@ -22,12 +22,14 @@ import {
   setWindVector, setIsFreestyleMode,
   setGateScores, setLevelStars, setHintRetries,
   setReplayBuffer, setReplaySample,
-  setBatteryTimeLeft, setBatteryDepleted
+  setBatteryTimeLeft, setBatteryDepleted,
+  operationalEntities, setOperationalEntities
 } from '../state.js';
 import { setFlightState } from '../flightState.js';
 import { updateBatteryBar } from '../hud.js';
+import { updateOperationalEntities } from './common.js';
 
-// Academy Levels (1 to 18)
+// Academy Levels (1 to 24)
 import level01 from './academy/level-01.js';
 import level02 from './academy/level-02.js';
 import level03 from './academy/level-03.js';
@@ -46,8 +48,14 @@ import level15 from './academy/level-15.js';
 import level16 from './academy/level-16.js';
 import level17 from './academy/level-17.js';
 import level18 from './academy/level-18.js';
+import level19 from './academy/level-19.js';
+import level20 from './academy/level-20.js';
+import level21 from './academy/level-21.js';
+import level22 from './academy/level-22.js';
+import level23 from './academy/level-23.js';
+import level24 from './academy/level-24.js';
 
-// Challenge Levels (1 to 10)
+// Challenge Levels (1 to 15)
 import challenge01 from './challenges/challenge-01.js';
 import challenge02 from './challenges/challenge-02.js';
 import challenge03 from './challenges/challenge-03.js';
@@ -58,13 +66,34 @@ import challenge07 from './challenges/challenge-07.js';
 import challenge08 from './challenges/challenge-08.js';
 import challenge09 from './challenges/challenge-09.js';
 import challenge10 from './challenges/challenge-10.js';
+import challenge11 from './challenges/challenge-11.js';
+import challenge12 from './challenges/challenge-12.js';
+import challenge13 from './challenges/challenge-13.js';
+import challenge14 from './challenges/challenge-14.js';
+import challenge15 from './challenges/challenge-15.js';
+
+// Operations & Cinematography (1 to 10)
+import operation01 from './operations/operation-01.js';
+import operation02 from './operations/operation-02.js';
+import operation03 from './operations/operation-03.js';
+import operation04 from './operations/operation-04.js';
+import operation05 from './operations/operation-05.js';
+import operation06 from './operations/operation-06.js';
+import operation07 from './operations/operation-07.js';
+import operation08 from './operations/operation-08.js';
+import operation09 from './operations/operation-09.js';
+import operation10 from './operations/operation-10.js';
 
 export const LEVEL_DEFS = [
   level01, level02, level03, level04, level05, level06,
   level07, level08, level09, level10, level11, level12,
   level13, level14, level15, level16, level17, level18,
+  level19, level20, level21, level22, level23, level24,
   challenge01, challenge02, challenge03, challenge04, challenge05,
-  challenge06, challenge07, challenge08, challenge09, challenge10
+  challenge06, challenge07, challenge08, challenge09, challenge10,
+  challenge11, challenge12, challenge13, challenge14, challenge15,
+  operation01, operation02, operation03, operation04, operation05,
+  operation06, operation07, operation08, operation09, operation10
 ];
 
 const missionTitleEl = document.getElementById('mission-title');
@@ -101,6 +130,7 @@ export function clearLevel() {
   setLevelLandingPad(null);
   setMovingGate(null);
   setMovingObstacles([]);
+  setOperationalEntities([]);
   setMissions([]);
 }
 
@@ -203,3 +233,5 @@ export function updateMovingGate(elapsedTime) {
     }
   });
 }
+
+export { updateOperationalEntities };

@@ -15,7 +15,7 @@ import {
   replayBuffer, movingObstacles
 } from './state.js';
 import { updateFlightPhysics } from './physics.js';
-import { updateMovingGate } from './levels.js';
+import { updateMovingGate, updateOperationalEntities } from './levels.js';
 import { updateMissionLogic, checkMissionLanding, getCurrentTargetPos } from './missions.js';
 import { updateFreestyleLogic } from './freestyle.js';
 import { updateSpeedTape, updateCompass, updateHorizon, updateDriftIndicator, updateInputViz, updateBatteryBar } from './hud.js';
@@ -71,6 +71,7 @@ const REPLAY_INTERVAL = 0.05; // must match REPLAY_SAMPLE_INTERVAL in missions.j
 const _fpvForward = new THREE.Vector3();
 const _fpvUp = new THREE.Vector3(0, 1, 0);
 const _fpvLookTarget = new THREE.Vector3();
+const _rendererSize = new THREE.Vector2();
 const PILOT_FPV_SIZE_PRESETS = {
   auto: { ratio: 0.30, minW: 180, maxW: 420 },
   small: { ratio: 0.24, minW: 150, maxW: 340 },
@@ -178,6 +179,7 @@ export function startLoop() {
       });
 
       updateMovingGate(elapsedTime);
+      updateOperationalEntities(FIXED_DT, elapsedTime);
       updateFlightPhysics(FIXED_DT, elapsedTime, isFPVMode, currentLevel);
 
       if (isFreestyleMode) {
@@ -211,8 +213,9 @@ export function startLoop() {
       replayGhost.position.set(pt.x, pt.y, pt.z);
     }
 
-    const drawW = renderer.domElement.width;
-    const drawH = renderer.domElement.height;
+    renderer.getSize(_rendererSize);
+    const cssW = _rendererSize.x;
+    const cssH = _rendererSize.y;
 
     const renderMainFpv = cameraViewMode === CAMERA_VIEW_MODES.FPV;
     let mainFpvChanges = [];
@@ -221,7 +224,7 @@ export function startLoop() {
     }
 
     renderer.setScissorTest(false);
-    renderer.setViewport(0, 0, drawW, drawH);
+    renderer.setViewport(0, 0, cssW, cssH);
     renderer.render(scene, camera);
 
     if (renderMainFpv) {
@@ -236,11 +239,11 @@ export function startLoop() {
       _fpvLookTarget.copy(drone.pos).addScaledVector(_fpvForward, CAMERA_SETTINGS.fpvLookAhead);
       fpvPipCamera.lookAt(_fpvLookTarget);
 
-      const sizePreset = resolvePilotPipSizePreset(drawW);
-      const insetW = Math.max(sizePreset.minW, Math.min(Math.floor(drawW * sizePreset.ratio), sizePreset.maxW));
+      const sizePreset = resolvePilotPipSizePreset(cssW);
+      const insetW = Math.max(sizePreset.minW, Math.min(Math.floor(cssW * sizePreset.ratio), sizePreset.maxW));
       const insetH = Math.floor(insetW * 0.58);
-      const insetX = Math.floor((drawW - insetW) * 0.5);
-      const insetY = Math.floor(drawH * 0.045);
+      const insetX = Math.floor((cssW - insetW) * 0.5);
+      const insetY = Math.floor(cssH * 0.045);
 
       fpvPipCamera.aspect = insetW / insetH;
       fpvPipCamera.updateProjectionMatrix();
@@ -254,6 +257,7 @@ export function startLoop() {
       renderer.render(scene, fpvPipCamera);
       restoreDroneRenderState(pipFpvChanges);
       renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, cssW, cssH);
     }
 
     // FPV propeller animation

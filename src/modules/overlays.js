@@ -42,7 +42,9 @@ export function showLevelOverlay(idx, isTransition) {
 
   setCurrentLevel(idx);
 
-  if (def.isChallenge) {
+  if (def.isOperation) {
+    currentTab = 'operations';
+  } else if (def.isChallenge) {
     currentTab = 'challenges';
   } else {
     currentTab = 'academy';
@@ -90,18 +92,35 @@ export function buildLevelProgressPanel() {
 
   const tabAcademy = document.getElementById('lp-tab-academy');
   const tabChallenges = document.getElementById('lp-tab-challenges');
+  const tabOperations = document.getElementById('lp-tab-operations');
   const sectionHeader = document.getElementById('lp-section-header');
 
   if (tabAcademy) tabAcademy.classList.toggle('active', currentTab === 'academy');
   if (tabChallenges) tabChallenges.classList.toggle('active', currentTab === 'challenges');
+  if (tabOperations) tabOperations.classList.toggle('active', currentTab === 'operations');
+
   if (sectionHeader) {
-    sectionHeader.textContent = currentTab === 'academy'
-      ? 'CURSO DE APRENDIZAJE (18 NIVELES)'
-      : 'MISIÓN DE ENTRENAMIENTO AVANZADO (10 RETOS)';
+    if (currentTab === 'academy') {
+      sectionHeader.textContent = 'CURSO DE APRENDIZAJE (24 NIVELES)';
+    } else if (currentTab === 'challenges') {
+      sectionHeader.textContent = 'MISIÓN DE ENTRENAMIENTO AVANZADO (15 RETOS)';
+    } else {
+      sectionHeader.textContent = 'MISIONES OPERATIVAS Y FILMACIÓN (10 MISIONES)';
+    }
   }
 
-  const startIdx = currentTab === 'academy' ? 0 : 18;
-  const endIdx   = currentTab === 'academy' ? Math.min(18, LEVEL_DEFS.length) : LEVEL_DEFS.length;
+  let startIdx = 0;
+  let endIdx = 24;
+  if (currentTab === 'academy') {
+    startIdx = 0;
+    endIdx = Math.min(24, LEVEL_DEFS.length);
+  } else if (currentTab === 'challenges') {
+    startIdx = 24;
+    endIdx = Math.min(39, LEVEL_DEFS.length);
+  } else {
+    startIdx = 39;
+    endIdx = LEVEL_DEFS.length;
+  }
 
   for (let idx = startIdx; idx < endIdx; idx++) {
     const def = LEVEL_DEFS[idx];
@@ -115,7 +134,15 @@ export function buildLevelProgressPanel() {
 
     const numEl = document.createElement('div');
     numEl.className = 'lp-level-num' + (completed ? ' completed' : ' unlocked');
-    numEl.textContent = currentTab === 'academy' ? (idx + 1) : `D${idx - 17}`;
+    let numLabel = '';
+    if (currentTab === 'academy') {
+      numLabel = `${idx + 1}`;
+    } else if (currentTab === 'challenges') {
+      numLabel = `D${idx - 23}`;
+    } else {
+      numLabel = `M${idx - 38}`;
+    }
+    numEl.textContent = numLabel;
 
     const best = prog.bestTimes[idx];
     const starsCount = prog.stars[idx] || 0;
@@ -191,6 +218,7 @@ export function initOverlayEvents() {
 
   const tabAcademy = document.getElementById('lp-tab-academy');
   const tabChallenges = document.getElementById('lp-tab-challenges');
+  const tabOperations = document.getElementById('lp-tab-operations');
   if (tabAcademy) {
     tabAcademy.addEventListener('click', () => {
       currentTab = 'academy';
@@ -200,6 +228,12 @@ export function initOverlayEvents() {
   if (tabChallenges) {
     tabChallenges.addEventListener('click', () => {
       currentTab = 'challenges';
+      buildLevelProgressPanel();
+    });
+  }
+  if (tabOperations) {
+    tabOperations.addEventListener('click', () => {
+      currentTab = 'operations';
       buildLevelProgressPanel();
     });
   }
